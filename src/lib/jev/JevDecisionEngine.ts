@@ -71,6 +71,25 @@ export class JevDecisionEngine implements DecisionEngine {
   }
 
   /**
+   * Evaluates whether a given intent is supported by the current Jev decision workflow.
+   * Currently, the genuine workflow is implemented exclusively for GOING_TO_SLEEP.
+   */
+  supportsIntent(intent: string): boolean {
+    if (!intent || !intent.trim()) return false;
+    const normalized = intent.trim().toLowerCase();
+    return normalized.includes("sleep") || normalized.includes("bed");
+  }
+
+  /**
+   * Evaluates whether a given scenario is supported by the current Jev decision workflow.
+   */
+  supportsScenario(scenario: { intent: string; tags?: readonly string[] }): boolean {
+    if (!scenario) return false;
+    if (scenario.tags && scenario.tags.includes("sleep")) return true;
+    return this.supportsIntent(scenario.intent);
+  }
+
+  /**
    * Evaluates a user intent against current HomeState.
    */
   async evaluate(intent: string, homeState: HomeState): Promise<DecisionResult> {
@@ -95,12 +114,9 @@ export class JevDecisionEngine implements DecisionEngine {
       };
     }
 
-    const normalizedIntent = intent.trim().toLowerCase();
-
-    // Milestone 2.2: Focus exclusively on GOING_TO_SLEEP scenario
+    // Milestone 2.2 / 3.4: Focus exclusively on GOING_TO_SLEEP scenario
     const isGoingToSleep =
-      normalizedIntent.includes("sleep") ||
-      normalizedIntent.includes("bed") ||
+      this.supportsIntent(intent) ||
       homeState.currentScenario?.id === "GOING_TO_SLEEP";
 
     if (!isGoingToSleep) {

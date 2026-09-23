@@ -150,6 +150,20 @@ HomeMind features a fully provider-neutral execution runner (`evaluateScenario`,
 
 ---
 
+## Jev Benchmark Execution (Phase 3)
+
+HomeMind includes a dedicated, reproducible benchmark execution layer (`runJevBenchmark`) for the real TypeSafe Jev decision engine:
+
+- **Controlled Dataset Reference**: Executes across the complete 36-scenario controlled dataset established in Milestone 3.2.
+- **Honest Capability Identification**: Only genuinely supported Jev workflows (`GOING_TO_SLEEP`, covering 9 scenarios) are executed through the engine.
+- **Explicit Unsupported Classification**: The remaining 27 scenarios (departure, movie, work, arrival, wake, lockdown) are recorded as `UNSUPPORTED` with detailed reasons. Zero actions are fabricated and no fake fallback policies are invoked.
+- **Generic Pipeline Integration**: Supported scenarios run through the generic `evaluateScenario` pipeline and `SimulationEngine`, preserving all independent multi-dimensional evaluator metrics.
+- **Independent Descriptive Statistics**: Reports independent action counts (matched, missed, forbidden, unnecessary) and high-resolution latencies (mean/median decision and total execution latencies). Zero composite scores, zero rankings, and zero winner declarations.
+- **Separation of Concerns**: Unit tests (`npm test`) validate benchmark mechanics using offline fixtures without network calls or secrets. Real benchmark execution is triggered explicitly via `npm run benchmark:jev` and requires `TYPESAFE_API_KEY`.
+- **Sanitized Artifact Persistence**: Benchmark runs output reproducible JSON reports to `artifacts/benchmarks/`, verified to contain zero secrets or credentials.
+
+---
+
 ## Technology Stack
 
 - **Framework**: Next.js 14+ (App Router)
@@ -211,11 +225,18 @@ npm test
 npm run typecheck
 ```
 
+### Running the Jev Benchmark (Milestone 3.4)
+```bash
+npm run benchmark:jev
+```
+*(Requires `TYPESAFE_API_KEY` in environment or `.env.local`)*
+
 ---
 
 ## Verification & Testing Coverage
 
-The automated test suite (`npm test`) covers **84 assertions across 13 test suites**:
+The automated test suite (`npm test`) covers **95 assertions across 14 test suites**:
+- **`jevBenchmark.test.ts`** (11 tests): Verifies Jev benchmark execution across the controlled 36-scenario dataset, honest capability classification (9 supported, 27 unsupported), zero action fabrication for unsupported scenarios, preservation of generic EvaluationResult metrics, latency telemetry, state isolation, engine ID retention, structured trace metadata attachment, safe error handling (SUPPORTED_FAILURE on API/simulation errors), credential sanitization, and independence of aggregate statistics.
 - **`evaluationRunner.test.ts`** (13 tests): Verifies the generic evaluation execution pipeline (`evaluateScenario`, `evaluateScenarios`), unmutated initial state isolation across consecutive executions, action application via `SimulationEngine`, timing telemetry (`decisionLatencyMs`, `simulationLatencyMs`, `evaluationLatencyMs`, `totalExecutionLatencyMs`), simulation rejection integrity (default throw, explicit throw, and non-throwing `success: false` / `evaluationResult: null` mode), structured `EvaluationRunnerError` propagation, no-op execution validation, multi-scenario dataset subset runs, and source code proof of zero vendor SDK imports or branching.
 - **`evaluationDataset.test.ts`** (10 tests): Verifies the 36-scenario controlled evaluation dataset, uniqueness of IDs, adherence to 7 categories, device and action validity against HomeMind configuration, independence of initial states, absence of vendor bias, and absence of overall scores/winners.
 - **`evaluationContract.test.ts`** (10 tests): Verifies provider-neutral evaluation contracts (`EvaluationScenario`, `ExpectedOutcome`, `ExpectedAction`, `EngineRun`, `EvaluationResult`), separation of expected device states from expected actions, action requirement semantics (`REQUIRED`, `FORBIDDEN`, `OPTIONAL`), acceptable alternatives representation, independent metric preservation without overall scores or winners, provider independence, and complete data immutability.
