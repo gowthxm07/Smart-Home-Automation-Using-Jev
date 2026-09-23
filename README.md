@@ -14,12 +14,13 @@
 - **Phase 2 — Milestone 2.1 (Jev Provider Foundation)**: COMPLETE. Server-side TypeSafe Jev API client, schemas, secret sanitization, adapter.
 - **Phase 2 — Milestone 2.2 (First Real Jev Workflow: GOING_TO_SLEEP)**: COMPLETE. End-to-end Jev-driven smart home workflow with non-redundant policy action generation.
 - **Phase 2 — Milestone 2.3 (Jev Decision Trace & Automation Visualization)**: COMPLETE. Dashboard observability panel with probability distributions, confidence ratings, and action history.
-- **Phase 3 — Milestone 3.1 (Evaluation Data Model & Experiment Contract)**: IMPLEMENTED.
-  Establishes provider-independent evaluation data models (`EvaluationScenario`, `ExpectedOutcome`, `ExpectedAction`, `EngineRun`, `EvaluationResult`, `EvaluationEngine`). Establishes the controlled experimental framework for evaluating different AI engines (Jev vs. future LLM) using identical test scenarios, identical initial states, and identical simulation validation. Preserves strict scientific integrity: independent multi-dimensional metrics without subjective overall scores, rankings, or winner declarations.
+- **Phase 3 — Milestone 3.1 (Evaluation Data Model & Experiment Contract)**: COMPLETE. Provider-independent evaluation data models (`EvaluationScenario`, `ExpectedOutcome`, `ExpectedAction`, `EngineRun`, `EvaluationResult`, `EvaluationEngine`).
+- **Phase 3 — Milestone 3.2 (Controlled Evaluation Scenario Dataset)**: IMPLEMENTED.
+  Established a controlled benchmark dataset of exactly 36 provider-neutral scenarios across 7 realistic categories. Each scenario defines a deterministic initial `HomeState` and an objective `ExpectedOutcome` strictly separating target device states from action requirements (`REQUIRED`, `FORBIDDEN`, `OPTIONAL`). Preserves strict scientific neutrality with zero vendor bias, overall scores, or rankings.
 
 > [!NOTE]
 > **Research Integrity & Provider Independence:**
-> The evaluation contracts are strictly decoupled from any specific AI provider or model. They observe output actions and final simulated states without bias. No LLM integration or benchmark dataset has been added in Milestone 3.1.
+> The evaluation contracts and scenario dataset are strictly decoupled from any specific AI provider or model. They observe output actions and final simulated states without bias. No LLM integration or benchmark comparison has been added in Milestone 3.2.
 
 ---
 
@@ -29,7 +30,7 @@
 | :--- | :--- | :--- | :--- |
 | **Phase 1** | **Simulation Foundation** | **COMPLETE** | Virtual home, 18 devices, deterministic engine, state management, manual controls, dashboard UI |
 | **Phase 2** | **Jev Decision Engine** | **COMPLETE** | TypeSafe Jev API integration, GOING_TO_SLEEP workflow, non-redundant policy, decision trace dashboard |
-| **Phase 3** | **Evaluation & LLM Baseline** | **IN PROGRESS** | **Milestone 3.1 Complete**: Provider-neutral evaluation data model & experiment contract<br>*Next*: LLM baseline integration |
+| **Phase 3** | **Evaluation & LLM Baseline** | **IN PROGRESS** | **Milestone 3.1 Complete**: Provider-neutral evaluation data model & experiment contract<br>**Milestone 3.2 Complete**: 36-scenario controlled evaluation dataset<br>*Next*: LLM baseline integration |
 | **Phase 4** | **Jev vs. LLM Comparison** | *NOT STARTED* | Side-by-side automated benchmarking across scenario matrices |
 | **Phase 5** | **Evaluation & Analytics** | *NOT STARTED* | Latency, token cost, decision accuracy, and state consistency metrics |
 | **Phase 6** | **Final Demonstration** | *NOT STARTED* | Final presentation walkthrough, project defense artifacts, and documentation polish |
@@ -119,6 +120,24 @@ Scenarios represent pure natural-language intent templates. To comply with archi
 
 ---
 
+## Controlled Evaluation Dataset (Phase 3)
+
+The evaluation suite incorporates a controlled dataset of **36 provider-independent benchmark scenarios** designed for future comparative experiments between decision-oriented AI (Jev) and conventional LLMs:
+
+- **Provider-Neutral Design**: Every scenario is formulated strictly in terms of the virtual smart home and expected device behaviors, with zero provider-specific assumptions, vendor identifiers, or scores.
+- **Deterministic Initial States**: Each test case initializes the virtual home in a known, reproducible `HomeState` snapshot using the 18 standard devices.
+- **Decoupled Expected Outcomes**: Distinguishes target device states from required action demands (`REQUIRED`, `FORBIDDEN`, `OPTIONAL`), enabling precise measurement of both state correctness and redundant action avoidance.
+- **Categorical Diversity**:
+  1. **Normal Intent Scenarios (6)**: Standard multi-device workflows (sleep, departure, movie, work, arrival, wake).
+  2. **Partial-State Scenarios (6)**: Environments where certain devices are already in target states, validating non-redundancy.
+  3. **No-Op Scenarios (5)**: Scenarios where the home is already in the optimal state, verifying zero-action restraint.
+  4. **Multi-Device Scenarios (6)**: Coordinated automation spanning multiple rooms, device categories, and load types.
+  5. **Context-Sensitive Scenarios (5)**: Decisions dependent on existing state context (e.g. fan speed modulation, unoccupied climate shutdown).
+  6. **Safety & Security Scenarios (4)**: Strict perimeter verification forbidding hazardous actions (e.g. unlocking exterior doors during sleep).
+  7. **Ambiguous / Varied Phrasings (4)**: Natural-language variations with objectively bounded target expectations.
+
+---
+
 ## Technology Stack
 
 - **Framework**: Next.js 14+ (App Router)
@@ -184,7 +203,8 @@ npm run typecheck
 
 ## Verification & Testing Coverage
 
-The automated test suite (`npm test`) covers **61 assertions across 11 test suites**:
+The automated test suite (`npm test`) covers **71 assertions across 12 test suites**:
+- **`evaluationDataset.test.ts`** (10 tests): Verifies the 36-scenario controlled evaluation dataset, uniqueness of IDs, adherence to 7 categories, device and action validity against HomeMind configuration, independence of initial states, absence of vendor bias, and absence of overall scores/winners.
 - **`evaluationContract.test.ts`** (10 tests): Verifies provider-neutral evaluation contracts (`EvaluationScenario`, `ExpectedOutcome`, `ExpectedAction`, `EngineRun`, `EvaluationResult`), separation of expected device states from expected actions, action requirement semantics (`REQUIRED`, `FORBIDDEN`, `OPTIONAL`), acceptable alternatives representation, independent metric preservation without overall scores or winners, provider independence, and complete data immutability.
 - **`jevDecisionTracePanel.test.ts`** (5 tests): Verifies Jev trace dashboard rendering in all execution states (`IDLE`, `EVALUATING`, `COMPLETED`, `ERROR`), Noul percentage bars, Choice distributions, confidence ratings, applied generated actions list, skipped redundant actions list, and confirms zero fabricated fake probabilities.
 - **`jevApiRoute.test.ts`** (4 tests): Verifies server-side route `/api/jev/evaluate` input validation (intent and homeState required), successful decision result propagation, secure error handling without credential leakage, and 400/500 status codes.
