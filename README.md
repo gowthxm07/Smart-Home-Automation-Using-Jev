@@ -8,13 +8,15 @@
 
 ---
 
-## Current Status: Phase 1 — Smart Home Simulation Foundation (COMPLETE)
+## Current Status: Phase 2 — Jev Decision Engine Integration (In Progress)
 
-Phase 1 provides the foundational virtual environment, deterministic simulation engine, centralized device state management, manual override controls, and interactive dark-themed dashboard. 
+- **Phase 1 (Simulation Foundation)**: COMPLETE and FROZEN.
+- **Phase 2 — Milestone 2.1 (Jev Provider / API Integration Foundation)**: IMPLEMENTED.
+  Establishes the server-side TypeSafe Jev client (`POST /v1/systemone`, `GET /v1/models`), structured decision primitive models (`noul`, `choice`, `score`), secret sanitization, and `JevDecisionEngine` adapter conforming to `DecisionEngine`.
 
 > [!NOTE]
-> **Provider-Independent AI Architecture:**
-> Phase 1 intentionally contains **no artificial intelligence decision generation**. Neither Jev nor any LLM has been integrated yet, and no fake or hardcoded scenario responses are executed. The architecture defines strict, provider-independent interfaces (`DecisionEngine`, `DecisionResult`, `Action`) so that future phases can plug in real AI systems without altering the virtual simulation foundation.
+> **Zero Fake AI & Intent-Only Scenarios:**
+> In Milestone 2.1, the API communication foundation is real and strictly server-side. No synthetic or mocked probabilities are generated in production code, and smart-home scenario decision policies (e.g. `GOING_TO_SLEEP`) remain intent-only templates without hardcoded device actions.
 
 ---
 
@@ -23,7 +25,7 @@ Phase 1 provides the foundational virtual environment, deterministic simulation 
 | Phase | Milestone | Status | Description |
 | :--- | :--- | :--- | :--- |
 | **Phase 1** | **Simulation Foundation** | **COMPLETE** | Virtual home, 18 devices, deterministic engine, state management, manual controls, dashboard UI |
-| **Phase 2** | **Jev Decision Engine** | *NOT STARTED* | Integration of the decision-oriented Jev reasoning engine via `DecisionEngine` interface |
+| **Phase 2** | **Jev Decision Engine** | **IN PROGRESS** | **Milestone 2.1 Complete**: Server-side TypeSafe Jev API client, types, error sanitization, adapter |
 | **Phase 3** | **LLM Baseline** | *NOT STARTED* | Integration of prompt-engineered LLM baseline (e.g. Gemini / OpenAI) for comparison |
 | **Phase 4** | **Jev vs. LLM Comparison** | *NOT STARTED* | Side-by-side automated benchmarking across scenario matrices |
 | **Phase 5** | **Evaluation & Analytics** | *NOT STARTED* | Latency, token cost, decision accuracy, and state consistency metrics |
@@ -130,6 +132,22 @@ Scenarios represent pure natural-language intent templates. To comply with archi
 - Node.js >= 18.x (Developed on v22.19.0)
 - npm >= 9.x
 
+### Environment Configuration (Phase 2)
+The TypeSafe Jev API integration requires a server-side API key.
+
+> [!CAUTION]
+> **Server-Side Secret Only**: Never prefix the key with `NEXT_PUBLIC_` or reference it in client components. The client architecture sanitizes credentials and strips secrets from all logs and error messages.
+
+1. Copy the example configuration template:
+   ```bash
+   cp .env.example .env.local
+   ```
+2. Open `.env.local` and add your TypeSafe API key:
+   ```env
+   TYPESAFE_API_KEY=your_actual_api_key_here
+   ```
+*(Note: `.env.local` is ignored by Git and will never be committed).*
+
 ### Installation
 ```bash
 git clone https://github.com/gowthxm07/Smart-Home-Automation-Using-Jev.git
@@ -163,8 +181,11 @@ npm run typecheck
 
 ## Verification & Testing Coverage
 
-The automated test suite (`npm test`) covers 19 assertions across 4 test suites:
-- **`simulationEngine.test.ts`**: Verifies turning lights ON/OFF/DIM, locking/unlocking doors, AC temperature setpoints & boundary rejections (e.g. 14°C or 35°C), fan speeds (0, 1, 2, 3), curtain position sliders, security arm/disarm, and action history logging.
-- **`manualControls.test.ts`**: Verifies sequential manual action dispatching and central audit log updates.
-- **`dashboardScenarios.test.ts`**: Verifies that scenario presets only populate natural language intents without mutating device states.
-- **`devices.test.ts`**: Verifies exact device count (18 devices), room distributions (6 Living Room, 5 Bedroom, 2 Kitchen, 3 Entrance, 2 Study), and scenario catalog integrity.
+The automated test suite (`npm test`) covers **33 assertions across 6 test suites**:
+- **`typesafeClient.test.ts`** (10 tests): Verifies TypeSafe Jev API communication (`POST /v1/systemone`, `GET /v1/models`), Bearer token headers, HTTP 401/403 auth error handling, HTTP 422 validation detail extraction, HTTP 500 error mapping, malformed JSON handling, typed primitive response preservation (`noul`, `choice`, `score`), and API key sanitization/redaction from error messages.
+- **`jevDecisionEngine.test.ts`** (4 tests): Verifies that `JevDecisionEngine` conforms to the existing `DecisionEngine` contract, validates server configuration, preserves structured Jev metadata, and executes health checks.
+- **`simulationEngine.test.ts`** (13 tests): Verifies turning lights ON/OFF/DIM, locking/unlocking doors, AC temperature setpoints & boundary rejections (e.g. 14°C or 35°C), fan speeds (0, 1, 2, 3), curtain position sliders, security arm/disarm, and action history logging.
+- **`devices.test.ts`** (3 tests): Verifies exact device count (18 devices), room distributions (6 Living Room, 5 Bedroom, 2 Kitchen, 3 Entrance, 2 Study), and scenario catalog integrity.
+- **`dashboardScenarios.test.ts`** (2 tests): Verifies that scenario presets only populate natural language intents without mutating device states.
+- **`manualControls.test.ts`** (1 test): Verifies sequential manual action dispatching and central audit log updates.
+
