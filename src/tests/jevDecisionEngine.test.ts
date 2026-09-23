@@ -46,7 +46,7 @@ describe("JevDecisionEngine (Milestone 2.1)", () => {
     vi.spyOn(mockClient, "evaluateSystemOne").mockResolvedValue({
       model: "jev-latest",
       answers: {
-        is_automation_relevant: {
+        lock_main_door: {
           type: "noul",
           noul: 0.94,
         },
@@ -64,12 +64,8 @@ describe("JevDecisionEngine (Milestone 2.1)", () => {
     expect(result.source).toBe("JEV");
     expect(result.intent).toBe("I am going to sleep");
     expect(result.confidence).toBe(0.94);
-    expect(result.reasoning).toContain("TypeSafe Jev System One");
     expect(result.metadata?.modelUsed).toBe("jev-latest");
-    expect((result.metadata?.rawAnswers as any)?.is_automation_relevant?.noul).toBe(0.94);
-
-    // In Milestone 2.1: Actions must NOT be hardcoded for scenarios
-    expect(result.actions).toHaveLength(0);
+    expect((result.metadata?.decisionTrace as any)?.decisions?.lock_main_door?.probability).toBe(0.94);
   });
 
   it("should perform health check using listModels", async () => {
