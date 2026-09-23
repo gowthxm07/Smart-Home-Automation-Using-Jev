@@ -138,6 +138,18 @@ The evaluation suite incorporates a controlled dataset of **36 provider-independ
 
 ---
 
+## Generic Evaluation Execution Pipeline (Phase 3)
+
+HomeMind features a fully provider-neutral execution runner (`evaluateScenario`, `evaluateScenarios`) that executes evaluation scenarios against any arbitrary `DecisionEngine`:
+
+- **Strict State Isolation**: Deep cloning ensures the scenario's initial `HomeState` is immutable, preventing cross-scenario state leakage.
+- **Standardized Execution Lifecycle**: Invokes `DecisionEngine.evaluate()`, validates `DecisionResult`, executes actions via `SimulationEngine`, computes outcomes via `StandardEvaluationEngine`, and preserves `EngineRun` and `EvaluationResult`.
+- **High-Resolution Latency Telemetry**: Captures `decisionLatencyMs`, `simulationLatencyMs`, `evaluationLatencyMs`, and `totalExecutionLatencyMs` via high-precision timestamps.
+- **Strict Evaluation Integrity & Robust Error Handling**: Any simulation error rejects invalid actions and immediately fails execution via `EvaluationRunnerError` (phase `"SIMULATION"` by default), strictly preventing rejected actions from ever generating a misleading normal benchmark `EvaluationResult`. Configurable `throwOnSimulationError: false` explicitly returns `success: false` and `evaluationResult: null`.
+- **Zero Vendor Bias**: Provider-agnostic execution containing 0 vendor SDK imports, 0 provider branches, and 0 overall scores or subjective rankings.
+
+---
+
 ## Technology Stack
 
 - **Framework**: Next.js 14+ (App Router)
@@ -203,7 +215,8 @@ npm run typecheck
 
 ## Verification & Testing Coverage
 
-The automated test suite (`npm test`) covers **71 assertions across 12 test suites**:
+The automated test suite (`npm test`) covers **84 assertions across 13 test suites**:
+- **`evaluationRunner.test.ts`** (13 tests): Verifies the generic evaluation execution pipeline (`evaluateScenario`, `evaluateScenarios`), unmutated initial state isolation across consecutive executions, action application via `SimulationEngine`, timing telemetry (`decisionLatencyMs`, `simulationLatencyMs`, `evaluationLatencyMs`, `totalExecutionLatencyMs`), simulation rejection integrity (default throw, explicit throw, and non-throwing `success: false` / `evaluationResult: null` mode), structured `EvaluationRunnerError` propagation, no-op execution validation, multi-scenario dataset subset runs, and source code proof of zero vendor SDK imports or branching.
 - **`evaluationDataset.test.ts`** (10 tests): Verifies the 36-scenario controlled evaluation dataset, uniqueness of IDs, adherence to 7 categories, device and action validity against HomeMind configuration, independence of initial states, absence of vendor bias, and absence of overall scores/winners.
 - **`evaluationContract.test.ts`** (10 tests): Verifies provider-neutral evaluation contracts (`EvaluationScenario`, `ExpectedOutcome`, `ExpectedAction`, `EngineRun`, `EvaluationResult`), separation of expected device states from expected actions, action requirement semantics (`REQUIRED`, `FORBIDDEN`, `OPTIONAL`), acceptable alternatives representation, independent metric preservation without overall scores or winners, provider independence, and complete data immutability.
 - **`jevDecisionTracePanel.test.ts`** (5 tests): Verifies Jev trace dashboard rendering in all execution states (`IDLE`, `EVALUATING`, `COMPLETED`, `ERROR`), Noul percentage bars, Choice distributions, confidence ratings, applied generated actions list, skipped redundant actions list, and confirms zero fabricated fake probabilities.
