@@ -8,6 +8,8 @@ import { ScenarioPreset } from "@/types/scenario";
 import { INITIAL_DEVICES } from "@/lib/devices.config";
 import { INITIAL_ROOMS } from "@/lib/rooms.config";
 import { simulationEngine } from "@/lib/simulationEngine";
+import { DecisionResult } from "@/types/engine";
+import { JevDecisionTrace } from "@/lib/jev/trace";
 
 interface HomeContextValue {
   homeState: HomeState;
@@ -46,6 +48,16 @@ interface HomeContextValue {
   // Computed metrics
   activeDevicesCount: number;
   totalDevicesCount: number;
+
+  // Milestone 2.3: Jev Observability & Automation
+  jevExecutionState: "IDLE" | "EVALUATING" | "COMPLETED" | "ERROR";
+  jevError: string | null;
+  latestDecisionResult: DecisionResult | null;
+  latestDecisionTrace: JevDecisionTrace | null;
+  latestAppliedActions: Action[];
+  latestSkippedActions: string[];
+  runJevAutomation: (intentText?: string) => Promise<boolean>;
+  clearJevTrace: () => void;
 }
 
 const HomeContext = createContext<HomeContextValue | undefined>(undefined);
@@ -64,6 +76,67 @@ export function HomeProvider({ children }: { children: React.ReactNode }) {
     lastAction: null,
     actionHistory: [],
   }));
+
+  // Jev Execution & Observability state (Milestone 2.3)
+  const [jevExecutionState, setJevExecutionState] = useState<"IDLE" | "EVALUATING" | "COMPLETED" | "ERROR">("IDLE");
+  const [jevError, setJevError] = useState<string | null>(null);
+  const [latestDecisionResult, setLatestDecisionResult] = useState<DecisionResult | null>(null);
+  const [latestDecisionTrace, setLatestDecisionTrace] = useState<JevDecisionTrace | null>(null);
+  const [latestAppliedActions, setLatestAppliedActions] = useState<Action[]>([]);
+  const [latestSkippedActions, setLatestSkippedActions] = useState<string[]>([]);
+
+  const clearJevTrace = useCallback(() => {
+    setLatestDecisionResult(null);
+    setLatestDecisionTrace(null);
+    setLatestAppliedActions([]);
+    setLatestSkippedActions([]);
+    setJevExecutionState("IDLE");
+    setJevError(null);
+  }, []);
+
+  const runJevAutomation = useCallback(async (intentText?: string): Promise<boolean> => {
+    const targetIntent = (intentText || homeState.currentIntentText || "I'm going to sleep.").trim();
+    setJevExecutionState("EVALUATING");
+    setJevError(null);
+
+    try {
+      const res = await fetch("/api/jev/evaluate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          intent: targetIntent,
+          homeState,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || `HTTP ${res.status}: Failed to evaluate with Jev.`);
+      }
+
+      const decResult = data.decisionResult;
+      setLatestDecisionResult(decResult);
+      const trace = decResult.metadata?.decisionTrace || null;
+      setLatestDecisionTrace(trace);
+      setLatestAppliedActions(decResult.actions || []);
+      setLatestSkippedActions(decResult.metadata?.skippedRedundantActions || []);
+
+      if (decResult.actions && decResult.actions.length > 0) {
+        setHomeState((prev) => {
+          const { finalState } = simulationEngine.applyBatchActions(decResult.actions, prev);
+          return finalState;
+        });
+      }
+
+      setJevExecutionState("COMPLETED");
+      return true;
+    } catch (err: unknown) {
+      const msg = (err as Error)?.message || "Jev evaluation failed.";
+      setJevError(msg);
+      setJevExecutionState("ERROR");
+      return false;
+    }
+  }, [homeState]);
 
   // Simulation clock ticker
   useEffect(() => {
@@ -424,6 +497,15 @@ export function HomeProvider({ children }: { children: React.ReactNode }) {
     resetSimulationState,
     activeDevicesCount,
     totalDevicesCount,
+    // Milestone 2.3: Jev Observability
+    jevExecutionState,
+    jevError,
+    latestDecisionResult,
+    latestDecisionTrace,
+    latestAppliedActions,
+    latestSkippedActions,
+    runJevAutomation,
+    clearJevTrace,
   };
 
   return <HomeContext.Provider value={value}>{children}</HomeContext.Provider>;

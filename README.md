@@ -12,12 +12,14 @@
 
 - **Phase 1 (Simulation Foundation)**: COMPLETE and FROZEN.
 - **Phase 2 — Milestone 2.1 (Jev Provider Foundation)**: COMPLETE. Server-side TypeSafe Jev API client, schemas, secret sanitization, adapter.
-- **Phase 2 — Milestone 2.2 (First Real Jev Workflow: GOING_TO_SLEEP)**: IMPLEMENTED.
+- **Phase 2 — Milestone 2.2 (First Real Jev Workflow: GOING_TO_SLEEP)**: COMPLETE.
   First end-to-end Jev-driven smart home workflow. Reads relevant `HomeState`, submits structured decision questions (`noul` and `choice`), captures a complete `JevDecisionTrace`, delegates to `GoingToSleepPolicy` to generate non-redundant `Action[]` (`source: 'JEV'`), and applies them via `SimulationEngine`.
+- **Phase 2 — Milestone 2.3 (Jev Decision Trace & Automation Visualization)**: IMPLEMENTED.
+  Live observability interface in the HomeMind dashboard. Allows operators to trigger real Jev evaluation for `GOING_TO_SLEEP`, track execution state (`IDLE`, `EVALUATING`, `COMPLETED`, `ERROR`), inspect structured decisions with Noul percentages and Choice distributions, view model metadata and token counts, verify confidence scores, inspect executed `Action[]` objects, and audit skipped redundant actions.
 
 > [!NOTE]
-> **Scenario Decoupling Maintained:**
-> Only `GOING_TO_SLEEP` ("I'm going to sleep.") is activated for Jev evaluation in Milestone 2.2. The other 6 scenario templates (`LEAVING_HOME`, `MOVIE_NIGHT`, etc.) remain pure intent templates without automated action generation. No fallback fake AI decisions are fabricated.
+> **Observability Layer & Scenario Scope:**
+> This dashboard serves strictly as an observability interface displaying Jev decision traces and probability distributions without subjective correctness or superiority claims. Only `GOING_TO_SLEEP` ("I'm going to sleep.") is activated for automated evaluation in Milestone 2.3; the remaining 6 scenarios remain pure intent presets. No fake probabilities or fallback decisions are fabricated.
 
 ---
 
@@ -26,7 +28,7 @@
 | Phase | Milestone | Status | Description |
 | :--- | :--- | :--- | :--- |
 | **Phase 1** | **Simulation Foundation** | **COMPLETE** | Virtual home, 18 devices, deterministic engine, state management, manual controls, dashboard UI |
-| **Phase 2** | **Jev Decision Engine** | **IN PROGRESS** | **Milestone 2.1 Complete**: TypeSafe Jev API client & adapter<br>**Milestone 2.2 Complete**: First real Jev decision workflow for `GOING_TO_SLEEP` |
+| **Phase 2** | **Jev Decision Engine** | **IN PROGRESS** | **Milestone 2.1 Complete**: TypeSafe Jev API client & adapter<br>**Milestone 2.2 Complete**: First real Jev decision workflow for `GOING_TO_SLEEP`<br>**Milestone 2.3 Complete**: Jev decision trace dashboard & observability interface |
 | **Phase 3** | **LLM Baseline** | *NOT STARTED* | Integration of prompt-engineered LLM baseline (e.g. Gemini / OpenAI) for comparison |
 | **Phase 4** | **Jev vs. LLM Comparison** | *NOT STARTED* | Side-by-side automated benchmarking across scenario matrices |
 | **Phase 5** | **Evaluation & Analytics** | *NOT STARTED* | Latency, token cost, decision accuracy, and state consistency metrics |
@@ -182,7 +184,9 @@ npm run typecheck
 
 ## Verification & Testing Coverage
 
-The automated test suite (`npm test`) covers **42 assertions across 8 test suites**:
+The automated test suite (`npm test`) covers **51 assertions across 10 test suites**:
+- **`jevDecisionTracePanel.test.ts`** (5 tests): Verifies Jev trace dashboard rendering in all execution states (`IDLE`, `EVALUATING`, `COMPLETED`, `ERROR`), Noul percentage bars, Choice distributions, confidence ratings, applied generated actions list, skipped redundant actions list, and confirms zero fabricated fake probabilities.
+- **`jevApiRoute.test.ts`** (4 tests): Verifies server-side route `/api/jev/evaluate` input validation (intent and homeState required), successful decision result propagation, secure error handling without credential leakage, and 400/500 status codes.
 - **`jevGoingToSleepWorkflow.test.ts`** (4 tests): End-to-end integration tests verifying the full decision pipeline (`JevDecisionEngine` -> `GoingToSleepPolicy` -> `Action[]` -> real `SimulationEngine` -> updated `HomeState` and audit history), probability/confidence preservation, malformed response rejection, API failure handling without fake decisions, and scenario isolation.
 - **`goingToSleepPolicy.test.ts`** (5 tests): Focused tests on the `GoingToSleepPolicy` rules: all relevant device action generation (`source: 'JEV'`), redundant action elimination (no-op when devices already in target state), Noul negative decision handling, choice fan speed mapping, and safe rejection of unsupported choices.
 - **`typesafeClient.test.ts`** (10 tests): Verifies TypeSafe Jev API communication (`POST /v1/systemone`, `GET /v1/models`), Bearer token headers, HTTP 401/403 auth error handling, HTTP 422 validation detail extraction, HTTP 500 error mapping, malformed JSON handling, typed primitive response preservation (`noul`, `choice`, `score`), and API key sanitization/redaction from error messages.

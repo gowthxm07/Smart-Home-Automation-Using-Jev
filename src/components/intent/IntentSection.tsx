@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 
 export const IntentSection: React.FC = () => {
-  const { homeState, selectScenario, setIntentText } = useHome();
+  const { homeState, selectScenario, setIntentText, runJevAutomation, jevExecutionState } = useHome();
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const getScenarioIcon = (iconName: string) => {
@@ -82,13 +82,31 @@ export const IntentSection: React.FC = () => {
             className="w-full px-4 py-3 rounded-xl bg-slate-900/90 border border-slate-700/80 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-sm text-slate-100 placeholder-slate-500 outline-none transition"
           />
         </div>
-        <button
-          type="submit"
-          className="px-5 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-medium text-xs sm:text-sm flex items-center gap-2 shadow-lg shadow-blue-600/25 transition whitespace-nowrap"
-        >
-          <Send className="w-4 h-4" />
-          <span>Process Intent</span>
-        </button>
+
+        {homeState.currentScenario?.id === "GOING_TO_SLEEP" ||
+        homeState.currentIntentText.toLowerCase().includes("sleep") ? (
+          <button
+            type="button"
+            onClick={() => runJevAutomation()}
+            disabled={jevExecutionState === "EVALUATING"}
+            className="px-5 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-semibold text-xs sm:text-sm flex items-center gap-2 shadow-lg shadow-purple-600/30 transition whitespace-nowrap"
+          >
+            <Sparkles className="w-4 h-4 text-purple-200" />
+            <span>
+              {jevExecutionState === "EVALUATING"
+                ? "Evaluating with Jev..."
+                : "Run Jev Automation"}
+            </span>
+          </button>
+        ) : (
+          <button
+            type="submit"
+            className="px-5 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-medium text-xs sm:text-sm flex items-center gap-2 shadow-lg shadow-blue-600/25 transition whitespace-nowrap"
+          >
+            <Send className="w-4 h-4" />
+            <span>Process Intent</span>
+          </button>
+        )}
       </form>
 
       {/* Predefined Scenario Buttons */}

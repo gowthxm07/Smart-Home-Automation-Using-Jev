@@ -6,6 +6,7 @@ import { Header } from "@/components/layout/Header";
 import { IntentSection } from "@/components/intent/IntentSection";
 import { VirtualFloorPlan } from "@/components/home/VirtualFloorPlan";
 import { ManualOverridePanel } from "@/components/controls/ManualOverridePanel";
+import { JevDecisionTracePanel } from "@/components/jev/JevDecisionTracePanel";
 import { ActionHistoryPanel } from "@/components/history/ActionHistoryPanel";
 import { AlertCircle, ShieldAlert, Cpu, CheckCircle } from "lucide-react";
 
@@ -34,8 +35,8 @@ export default function HomeMindDashboard() {
               </div>
             </div>
             <div className="flex items-center gap-2 shrink-0">
-              <span className="px-2.5 py-1 rounded-full bg-slate-900 font-mono text-[10px] text-slate-400 border border-slate-800">
-                Next: Phase 2 (Jev Decision Engine)
+              <span className="px-2.5 py-1 rounded-full bg-purple-500/10 font-mono text-[10px] text-purple-300 border border-purple-500/30 font-semibold">
+                Phase 2: Jev Decision Engine Active
               </span>
             </div>
           </div>
@@ -43,10 +44,13 @@ export default function HomeMindDashboard() {
           {/* Section 1: User Intent & Scenarios */}
           <IntentSection />
 
-          {/* Section 2: Manual Device Overrides */}
+          {/* Section 2: Jev Decision Trace & Observability (Milestone 2.3) */}
+          <JevDecisionTracePanel />
+
+          {/* Section 3: Manual Device Overrides */}
           <ManualOverridePanel />
 
-          {/* Section 3: Virtual Smart Home Floor Plan & Device Grid */}
+          {/* Section 4: Virtual Smart Home Floor Plan & Device Grid */}
           <VirtualFloorPlan />
 
           {/* Section 4: Live Action Audit Log */}
