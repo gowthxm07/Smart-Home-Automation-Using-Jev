@@ -12,14 +12,14 @@
 
 - **Phase 1 (Simulation Foundation)**: COMPLETE and FROZEN.
 - **Phase 2 — Milestone 2.1 (Jev Provider Foundation)**: COMPLETE. Server-side TypeSafe Jev API client, schemas, secret sanitization, adapter.
-- **Phase 2 — Milestone 2.2 (First Real Jev Workflow: GOING_TO_SLEEP)**: COMPLETE.
-  First end-to-end Jev-driven smart home workflow. Reads relevant `HomeState`, submits structured decision questions (`noul` and `choice`), captures a complete `JevDecisionTrace`, delegates to `GoingToSleepPolicy` to generate non-redundant `Action[]` (`source: 'JEV'`), and applies them via `SimulationEngine`.
-- **Phase 2 — Milestone 2.3 (Jev Decision Trace & Automation Visualization)**: IMPLEMENTED.
-  Live observability interface in the HomeMind dashboard. Allows operators to trigger real Jev evaluation for `GOING_TO_SLEEP`, track execution state (`IDLE`, `EVALUATING`, `COMPLETED`, `ERROR`), inspect structured decisions with Noul percentages and Choice distributions, view model metadata and token counts, verify confidence scores, inspect executed `Action[]` objects, and audit skipped redundant actions.
+- **Phase 2 — Milestone 2.2 (First Real Jev Workflow: GOING_TO_SLEEP)**: COMPLETE. End-to-end Jev-driven smart home workflow with non-redundant policy action generation.
+- **Phase 2 — Milestone 2.3 (Jev Decision Trace & Automation Visualization)**: COMPLETE. Dashboard observability panel with probability distributions, confidence ratings, and action history.
+- **Phase 3 — Milestone 3.1 (Evaluation Data Model & Experiment Contract)**: IMPLEMENTED.
+  Establishes provider-independent evaluation data models (`EvaluationScenario`, `ExpectedOutcome`, `ExpectedAction`, `EngineRun`, `EvaluationResult`, `EvaluationEngine`). Establishes the controlled experimental framework for evaluating different AI engines (Jev vs. future LLM) using identical test scenarios, identical initial states, and identical simulation validation. Preserves strict scientific integrity: independent multi-dimensional metrics without subjective overall scores, rankings, or winner declarations.
 
 > [!NOTE]
-> **Observability Layer & Scenario Scope:**
-> This dashboard serves strictly as an observability interface displaying Jev decision traces and probability distributions without subjective correctness or superiority claims. Only `GOING_TO_SLEEP` ("I'm going to sleep.") is activated for automated evaluation in Milestone 2.3; the remaining 6 scenarios remain pure intent presets. No fake probabilities or fallback decisions are fabricated.
+> **Research Integrity & Provider Independence:**
+> The evaluation contracts are strictly decoupled from any specific AI provider or model. They observe output actions and final simulated states without bias. No LLM integration or benchmark dataset has been added in Milestone 3.1.
 
 ---
 
@@ -28,8 +28,8 @@
 | Phase | Milestone | Status | Description |
 | :--- | :--- | :--- | :--- |
 | **Phase 1** | **Simulation Foundation** | **COMPLETE** | Virtual home, 18 devices, deterministic engine, state management, manual controls, dashboard UI |
-| **Phase 2** | **Jev Decision Engine** | **IN PROGRESS** | **Milestone 2.1 Complete**: TypeSafe Jev API client & adapter<br>**Milestone 2.2 Complete**: First real Jev decision workflow for `GOING_TO_SLEEP`<br>**Milestone 2.3 Complete**: Jev decision trace dashboard & observability interface |
-| **Phase 3** | **LLM Baseline** | *NOT STARTED* | Integration of prompt-engineered LLM baseline (e.g. Gemini / OpenAI) for comparison |
+| **Phase 2** | **Jev Decision Engine** | **COMPLETE** | TypeSafe Jev API integration, GOING_TO_SLEEP workflow, non-redundant policy, decision trace dashboard |
+| **Phase 3** | **Evaluation & LLM Baseline** | **IN PROGRESS** | **Milestone 3.1 Complete**: Provider-neutral evaluation data model & experiment contract<br>*Next*: LLM baseline integration |
 | **Phase 4** | **Jev vs. LLM Comparison** | *NOT STARTED* | Side-by-side automated benchmarking across scenario matrices |
 | **Phase 5** | **Evaluation & Analytics** | *NOT STARTED* | Latency, token cost, decision accuracy, and state consistency metrics |
 | **Phase 6** | **Final Demonstration** | *NOT STARTED* | Final presentation walkthrough, project defense artifacts, and documentation polish |
@@ -184,7 +184,8 @@ npm run typecheck
 
 ## Verification & Testing Coverage
 
-The automated test suite (`npm test`) covers **51 assertions across 10 test suites**:
+The automated test suite (`npm test`) covers **61 assertions across 11 test suites**:
+- **`evaluationContract.test.ts`** (10 tests): Verifies provider-neutral evaluation contracts (`EvaluationScenario`, `ExpectedOutcome`, `ExpectedAction`, `EngineRun`, `EvaluationResult`), separation of expected device states from expected actions, action requirement semantics (`REQUIRED`, `FORBIDDEN`, `OPTIONAL`), acceptable alternatives representation, independent metric preservation without overall scores or winners, provider independence, and complete data immutability.
 - **`jevDecisionTracePanel.test.ts`** (5 tests): Verifies Jev trace dashboard rendering in all execution states (`IDLE`, `EVALUATING`, `COMPLETED`, `ERROR`), Noul percentage bars, Choice distributions, confidence ratings, applied generated actions list, skipped redundant actions list, and confirms zero fabricated fake probabilities.
 - **`jevApiRoute.test.ts`** (4 tests): Verifies server-side route `/api/jev/evaluate` input validation (intent and homeState required), successful decision result propagation, secure error handling without credential leakage, and 400/500 status codes.
 - **`jevGoingToSleepWorkflow.test.ts`** (4 tests): End-to-end integration tests verifying the full decision pipeline (`JevDecisionEngine` -> `GoingToSleepPolicy` -> `Action[]` -> real `SimulationEngine` -> updated `HomeState` and audit history), probability/confidence preservation, malformed response rejection, API failure handling without fake decisions, and scenario isolation.
