@@ -19,19 +19,21 @@
 - **Phase 3 — Milestone 3.3 (Generic Evaluation Execution Pipeline)**: COMPLETE. Provider-neutral execution runner (`evaluateScenario`, `evaluateScenarios`) with high-resolution latency telemetry and strict state isolation.
 - **Phase 3 — Milestone 3.4 (Jev Benchmark Execution)**: COMPLETE. Automated benchmark execution layer with sanitized JSON artifact generation.
 - **Phase 3 — Milestone 3.5 (Expand Jev Decision Coverage)**: COMPLETE. Expanded real TypeSafe Jev decision pipeline across 7 intent families covering 34 supported scenarios and 2 explicitly unsupported scenarios.
-- **Phase 3 — Milestone 3.6 (Conventional LLM Decision Engine)**: COMPLETE.
-  Introduced a provider-independent conventional LLM DecisionEngine powered by a local Ollama runtime (`OLLAMA_BASE_URL`, `OLLAMA_MODEL`):
-  - Strictly implements the provider-neutral `DecisionEngine` contract (`provider: "LLM"`, `id: "llm-ollama"`).
-  - Pure local Ollama runtime via non-streaming `/api/chat` with JSON schema enforcement; zero cloud vendor SDKs, zero API keys, and zero paid inference dependencies.
-  - Zero dataset contamination: prompt template receives only the user intent and current home device state context (IDs, room, category, state, and capabilities); zero access to scenario IDs, ground-truth outcomes, or evaluation logic.
-  - Robust structured output validation: markdown code block stripping, JSON schema parsing, 18-device registry validation, and 14-action capability/boundary enforcement.
-  - State-aware redundancy normalization: actions matching existing device state are skipped and preserved in execution metadata (`skippedRedundantActions`).
-  - Strict zero-fallback error propagation: rejects any fallback to Jev, hardcoded rules, or fake mock actions if Ollama fails.
-  - **LLM-vs-Jev comparison is not yet implemented.** No comparison experiments, rankings, composite scores, or winner metrics exist.
+- **Phase 3 — Milestone 3.6 (Conventional LLM Decision Engine)**: COMPLETE. Introduced provider-independent conventional LLM DecisionEngine powered by local Ollama (`OLLAMA_BASE_URL`, `OLLAMA_MODEL`) with uncalibrated confidence (`undefined`) and raw `proposedActions` retention.
+- **Phase 3 — Milestone 3.7 (Controlled Comparative Evaluation Infrastructure)**: COMPLETE.
+  Built a provider-neutral experimental execution framework (`runComparativeScenario`, `runComparativeBenchmark`) capable of evaluating the SAME controlled scenarios across multiple DecisionEngines:
+  - Independent deep clones of initial `HomeState` guaranteeing zero cross-provider state leakage.
+  - Deterministic SHA-256 state fingerprinting (`computeStateFingerprint`) verifying identical initial conditions.
+  - Exact same natural-language intent delivered to all providers without rewriting.
+  - Same deterministic `SimulationEngine` and same `StandardEvaluationEngine` analyzing all providers.
+  - Explicit three-state execution status: `SUPPORTED_SUCCESS`, `SUPPORTED_FAILURE`, `UNSUPPORTED`.
+  - Preserves independent multi-dimensional metrics without composite scores, rankings, or winner declarations.
+  - Reproducibility metadata capturing dynamic Git commit hash, environment, and dataset version.
+  - **The comparative experiment has NOT yet been executed.** No comparative benchmarks, rankings, or winner metrics exist.
 
 > [!NOTE]
 > **Research Integrity & Provider Independence:**
-> The evaluation contracts, scenario dataset, and execution runner are strictly decoupled from any specific AI provider or model. They observe output actions and final simulated states without bias. **LLM-vs-Jev comparison is not yet implemented.**
+> The evaluation contracts, scenario dataset, execution runner, and comparative infrastructure are strictly decoupled from any specific AI provider or model. They observe output actions and final simulated states without bias. **Comparative benchmarks have not yet been executed.**
 
 ---
 
@@ -41,7 +43,7 @@
 | :--- | :--- | :--- | :--- |
 | **Phase 1** | **Simulation Foundation** | **COMPLETE** | Virtual home, 18 devices, deterministic engine, state management, manual controls, dashboard UI |
 | **Phase 2** | **Jev Decision Engine** | **COMPLETE** | TypeSafe Jev API integration, GOING_TO_SLEEP workflow, non-redundant policy, decision trace dashboard |
-| **Phase 3** | **Evaluation & Baseline Infrastructure** | **IN PROGRESS** | **Milestones 3.1–3.4 Complete**: Data model, 36 scenarios, execution pipeline, Jev benchmark<br>**Milestone 3.5 Complete**: Expanded Jev decision coverage across 7 intent families (34 supported, 2 unsupported)<br>**Milestone 3.6 Complete**: Conventional LLM Decision Engine via local Ollama baseline (zero comparison, zero rankings)<br>*Next*: Comparative evaluation execution |
+| **Phase 3** | **Evaluation & Baseline Infrastructure** | **IN PROGRESS** | **Milestones 3.1–3.4 Complete**: Data model, 36 scenarios, execution pipeline, Jev benchmark<br>**Milestone 3.5 Complete**: Expanded Jev decision coverage across 7 intent families (34 supported, 2 unsupported)<br>**Milestone 3.6 Complete**: Conventional LLM Decision Engine via local Ollama baseline<br>**Milestone 3.7 Complete**: Controlled comparative evaluation infrastructure (zero comparison run, zero rankings)<br>*Next*: Comparative benchmark execution |
 | **Phase 4** | **Jev vs. LLM Comparison** | *NOT STARTED* | Side-by-side automated benchmarking across scenario matrices |
 | **Phase 5** | **Evaluation & Analytics** | *NOT STARTED* | Latency, token cost, decision accuracy, and state consistency metrics |
 | **Phase 6** | **Final Demonstration** | *NOT STARTED* | Final presentation walkthrough, project defense artifacts, and documentation polish |
@@ -193,6 +195,22 @@ HomeMind provides a conventional LLM baseline decision engine implemented via a 
 
 ---
 
+## Controlled Comparative Evaluation Infrastructure (Milestone 3.7)
+
+HomeMind incorporates a provider-neutral comparative execution framework (`src/lib/evaluation/comparison/`):
+
+- **Independent Initial State Isolation**: Deep-cloning ensures that each provider receives an isolated replica of the scenario's canonical `HomeState`. Any mutations by one engine can never affect another provider's input or execution.
+- **Deterministic State Fingerprinting**: Computes a SHA-256 cryptographic digest (`computeStateFingerprint`) over canonicalized device configurations and states, proving mathematically that both providers start from equivalent initial conditions.
+- **Intent Identity**: Both providers receive the exact same natural-language intent string without modification or bias.
+- **Unified Simulation & Evaluation**: Every provider's generated `Action[]` is executed against its own isolated state via the deterministic `SimulationEngine` and evaluated via the provider-independent `StandardEvaluationEngine`.
+- **Explicit Three-State Status Modeling**: Distinguishes `SUPPORTED_SUCCESS`, `SUPPORTED_FAILURE`, and `UNSUPPORTED`. Unsupported scenarios are never converted to failures or evaluated with fabricated actions.
+- **Provider Metadata Preservation**: Retains provider-specific telemetry (Jev decision traces, LLM `proposedActions` before redundancy filtering, `skippedRedundantActions`, token metrics) without forcing uniform internal representations.
+- **Sanitized Serialization**: Deterministic JSON serialization (`serializeComparativeReport`) with automatic credential and secret pattern redaction.
+- **Scientific Objectivity**: Zero composite scores, zero rankings, zero winner metrics.
+- **Important**: **The comparative benchmark experiment has not yet been executed.** No `benchmark:comparison` command exists.
+
+---
+
 ## Technology Stack
 
 - **Framework**: Next.js 14+ (App Router)
@@ -281,7 +299,8 @@ npm run benchmark:jev
 
 ## Verification & Testing Coverage
 
-The automated test suite (`npm test`) covers **143 assertions across 17 test suites**:
+The automated test suite (`npm test`) covers **162 assertions across 18 test suites**:
+- **`comparativeRunner.test.ts`** (19 tests): Verifies provider-neutral comparative execution (`runComparativeScenario`, `runComparativeBenchmark`), delivery of exact same intent, deep-cloned independent initial state isolation, deterministic SHA-256 state fingerprinting (`computeStateFingerprint`), sensitivity to state modifications, isolation against state mutations during execution, unified `SimulationEngine` and `StandardEvaluationEngine` processing, independent latency recording (decision, simulation, evaluation, total), provider metadata retention (Jev traces, LLM `proposedActions` and `skippedRedundantActions`, uncalibrated confidence), explicit `UNSUPPORTED` status preservation, graceful failure handling (`SUPPORTED_FAILURE`), zero fallback behavior, zero answer-key leakage, sanitized report serialization, 100% dataset immutability, and confirms zero winner, ranking, or composite score metrics.
 - **`llmDecisionEngine.test.ts`** (21 tests): Verifies `LLMDecisionEngine` against the provider-independent `DecisionEngine` contract, valid action generation, multi-device actions, no-op handling, markdown code block stripping, malformed JSON rejection, schema validation errors, unknown device ID rejection, invalid action type rejection, out-of-bounds value validation, strict error propagation with zero fallback, absence of fabricated confidence (`confidence: undefined`), preservation of raw validated `proposedActions` alongside `skippedRedundantActions`, provider metadata and latency capture, home state immutability, generic `EvaluationRunner` end-to-end integration, and architectural independence guardrail (asserting zero imports from `@/lib/evaluation`, `@/lib/policies`, `@/lib/jev`, or `@/lib/typesafe`).
 - **`ollamaClient.test.ts`** (10 tests): Verifies local `OllamaClient` initialization, default/custom configurations, non-streaming `/api/chat` with JSON format, model listing (`/api/tags`), health checking, timeout abort handling (`OllamaTimeoutError`), connection failure handling (`OllamaConnectionError`), HTTP error mapping (`OllamaApiError`), and missing model detection.
 - **`expandedJevPolicies.test.ts`** (17 tests): Verifies expanded Jev decision policies across all 7 supported intent families (`GOING_TO_SLEEP`, `LEAVING_HOME`, `MOVIE_NIGHT`, `WORKING`, `COMING_HOME`, `RELAXING`, `WAKING_UP`), redundant action skipping, context sensitivity, and zero imports from evaluation dataset.
