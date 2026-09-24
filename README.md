@@ -15,12 +15,23 @@
 - **Phase 2 — Milestone 2.2 (First Real Jev Workflow: GOING_TO_SLEEP)**: COMPLETE. End-to-end Jev-driven smart home workflow with non-redundant policy action generation.
 - **Phase 2 — Milestone 2.3 (Jev Decision Trace & Automation Visualization)**: COMPLETE. Dashboard observability panel with probability distributions, confidence ratings, and action history.
 - **Phase 3 — Milestone 3.1 (Evaluation Data Model & Experiment Contract)**: COMPLETE. Provider-independent evaluation data models (`EvaluationScenario`, `ExpectedOutcome`, `ExpectedAction`, `EngineRun`, `EvaluationResult`, `EvaluationEngine`).
-- **Phase 3 — Milestone 3.2 (Controlled Evaluation Scenario Dataset)**: IMPLEMENTED.
-  Established a controlled benchmark dataset of exactly 36 provider-neutral scenarios across 7 realistic categories. Each scenario defines a deterministic initial `HomeState` and an objective `ExpectedOutcome` strictly separating target device states from action requirements (`REQUIRED`, `FORBIDDEN`, `OPTIONAL`). Preserves strict scientific neutrality with zero vendor bias, overall scores, or rankings.
+- **Phase 3 — Milestone 3.2 (Controlled Evaluation Scenario Dataset)**: COMPLETE. Controlled benchmark dataset of 36 provider-neutral scenarios across 7 categories.
+- **Phase 3 — Milestone 3.3 (Generic Evaluation Execution Pipeline)**: COMPLETE. Provider-neutral execution runner (`evaluateScenario`, `evaluateScenarios`) with high-resolution latency telemetry and strict state isolation.
+- **Phase 3 — Milestone 3.4 (Jev Benchmark Execution)**: COMPLETE. Automated benchmark execution layer with sanitized JSON artifact generation.
+- **Phase 3 — Milestone 3.5 (Expand Jev Decision Coverage)**: COMPLETE.
+  Expanded the real TypeSafe Jev decision pipeline across six additional intent families (7 total):
+  1. `GOING_TO_SLEEP` (9 scenarios)
+  2. `LEAVING_HOME` (7 scenarios)
+  3. `MOVIE_NIGHT` (6 scenarios)
+  4. `WORKING` (3 scenarios)
+  5. `COMING_HOME` (4 scenarios)
+  6. `RELAXING` (1 scenario)
+  7. `WAKING_UP` (4 scenarios)
+  Supported scenarios expanded from 9 to 34 out of 36 scenarios. Exactly 2 scenarios remain legitimately unsupported (`security-lockdown-01`, `ambiguous-night-ready-01`). All 7 policy implementations strictly enforce redundant action elimination and maintain zero imports from the evaluation dataset.
 
 > [!NOTE]
 > **Research Integrity & Provider Independence:**
-> The evaluation contracts and scenario dataset are strictly decoupled from any specific AI provider or model. They observe output actions and final simulated states without bias. No LLM integration or benchmark comparison has been added in Milestone 3.2.
+> The evaluation contracts and scenario dataset are strictly decoupled from any specific AI provider or model. They observe output actions and final simulated states without bias. No LLM integration or benchmark comparison has been added in Milestone 3.5.
 
 ---
 
@@ -30,7 +41,7 @@
 | :--- | :--- | :--- | :--- |
 | **Phase 1** | **Simulation Foundation** | **COMPLETE** | Virtual home, 18 devices, deterministic engine, state management, manual controls, dashboard UI |
 | **Phase 2** | **Jev Decision Engine** | **COMPLETE** | TypeSafe Jev API integration, GOING_TO_SLEEP workflow, non-redundant policy, decision trace dashboard |
-| **Phase 3** | **Evaluation & LLM Baseline** | **IN PROGRESS** | **Milestone 3.1 Complete**: Provider-neutral evaluation data model & experiment contract<br>**Milestone 3.2 Complete**: 36-scenario controlled evaluation dataset<br>*Next*: LLM baseline integration |
+| **Phase 3** | **Evaluation & Baseline Infrastructure** | **IN PROGRESS** | **Milestones 3.1–3.4 Complete**: Data model, 36 scenarios, execution pipeline, Jev benchmark<br>**Milestone 3.5 Complete**: Expanded Jev decision coverage across 7 intent families (34 supported, 2 unsupported)<br>*Next*: LLM baseline integration |
 | **Phase 4** | **Jev vs. LLM Comparison** | *NOT STARTED* | Side-by-side automated benchmarking across scenario matrices |
 | **Phase 5** | **Evaluation & Analytics** | *NOT STARTED* | Latency, token cost, decision accuracy, and state consistency metrics |
 | **Phase 6** | **Final Demonstration** | *NOT STARTED* | Final presentation walkthrough, project defense artifacts, and documentation polish |
@@ -155,8 +166,8 @@ HomeMind features a fully provider-neutral execution runner (`evaluateScenario`,
 HomeMind includes a dedicated, reproducible benchmark execution layer (`runJevBenchmark`) for the real TypeSafe Jev decision engine:
 
 - **Controlled Dataset Reference**: Executes across the complete 36-scenario controlled dataset established in Milestone 3.2.
-- **Honest Capability Identification**: Only genuinely supported Jev workflows (`GOING_TO_SLEEP`, covering 9 scenarios) are executed through the engine.
-- **Explicit Unsupported Classification**: The remaining 27 scenarios (departure, movie, work, arrival, wake, lockdown) are recorded as `UNSUPPORTED` with detailed reasons. Zero actions are fabricated and no fake fallback policies are invoked.
+- **Honest Capability Identification**: Genuinely supported Jev workflows across 7 intent families (`GOING_TO_SLEEP`, `LEAVING_HOME`, `MOVIE_NIGHT`, `WORKING`, `COMING_HOME`, `RELAXING`, `WAKING_UP`, covering 34 scenarios) are executed through the engine.
+- **Explicit Unsupported Classification**: The remaining 2 scenarios (`security-lockdown-01`, `ambiguous-night-ready-01`) are recorded as `UNSUPPORTED` with descriptive explanations. Zero actions are fabricated and no fake fallback policies are invoked.
 - **Generic Pipeline Integration**: Supported scenarios run through the generic `evaluateScenario` pipeline and `SimulationEngine`, preserving all independent multi-dimensional evaluator metrics.
 - **Independent Descriptive Statistics**: Reports independent action counts (matched, missed, forbidden, unnecessary) and high-resolution latencies (mean/median decision and total execution latencies). Zero composite scores, zero rankings, and zero winner declarations.
 - **Separation of Concerns**: Unit tests (`npm test`) validate benchmark mechanics using offline fixtures without network calls or secrets. Real benchmark execution is triggered explicitly via `npm run benchmark:jev` and requires `TYPESAFE_API_KEY`.

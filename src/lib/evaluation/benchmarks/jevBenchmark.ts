@@ -24,11 +24,11 @@ export interface JevBenchmarkOptions {
 }
 
 /**
- * Determines whether a scenario is supported by the current real Jev decision workflow.
+ * Determines whether a scenario is supported by the real Jev decision engine.
  *
- * Current capability: GOING_TO_SLEEP.
- * Scenarios requiring other workflows (departure, movie, work, arrival, wake, etc.)
- * are classified as UNSUPPORTED without attempting execution or inventing fallback policies.
+ * Evaluates whether the scenario belongs to one of the 7 supported Jev decision
+ * workflow families: GOING_TO_SLEEP, LEAVING_HOME, MOVIE_NIGHT, WORKING,
+ * COMING_HOME, RELAXING, WAKING_UP.
  */
 export function isScenarioSupportedByJev(
   scenario: EvaluationScenario,
@@ -38,17 +38,16 @@ export function isScenarioSupportedByJev(
     return engine.supportsScenario(scenario);
   }
   if (!scenario) return false;
-  if (scenario.tags && scenario.tags.includes("sleep")) return true;
-  const normalized = (scenario.intent || "").toLowerCase();
-  return normalized.includes("sleep") || normalized.includes("bed");
+  const defaultEngine = new JevDecisionEngine();
+  return defaultEngine.supportsScenario(scenario);
 }
 
 /**
- * Returns a descriptive explanation of why a scenario is unsupported by the current Jev implementation.
+ * Returns a descriptive explanation of why a scenario is unsupported by the Jev decision engine.
  */
 export function getUnsupportedReason(scenario: EvaluationScenario): string {
   const category = scenario.metadata?.category || "UNKNOWN";
-  return `Scenario category "${category}" (intent: "${scenario.intent}") requires an active domain workflow not yet implemented in the real Jev engine. Only GOING_TO_SLEEP is currently active.`;
+  return `Scenario category "${category}" (intent: "${scenario.intent}") requires an active domain workflow not currently supported by the Jev decision engine (supported workflows: GOING_TO_SLEEP, LEAVING_HOME, MOVIE_NIGHT, WORKING, COMING_HOME, RELAXING, WAKING_UP).`;
 }
 
 /**

@@ -174,18 +174,18 @@ describe("Jev Going To Sleep End-to-End Workflow (Milestone 2.2)", () => {
     );
   });
 
-  it("Step 13: Intents other than GOING_TO_SLEEP must remain intent-only in Milestone 2.2", async () => {
+  it("Step 13: Intents outside supported workflows must return clean unsupported result without calling Jev API", async () => {
     const homeState = createBaseHomeState();
     const mockClient = new TypeSafeClient({ apiKey: "test_key" });
     const spy = vi.spyOn(mockClient, "evaluateSystemOne");
 
     const engine = new JevDecisionEngine({ client: mockClient });
 
-    const leavingHomeResult = await engine.evaluate("I'm leaving home.", homeState);
+    const unsupportedResult = await engine.evaluate("Lock down the house.", homeState);
 
-    // Must return 0 actions and not call Jev API for other scenarios yet
-    expect(leavingHomeResult.actions).toHaveLength(0);
-    expect(leavingHomeResult.reasoning).toContain("Only GOING_TO_SLEEP is active in Milestone 2.2");
+    // Must return 0 actions and not call Jev API for unsupported intents
+    expect(unsupportedResult.actions).toHaveLength(0);
+    expect(unsupportedResult.reasoning).toContain("is not supported by JevDecisionEngine");
     expect(spy).not.toHaveBeenCalled();
   });
 });

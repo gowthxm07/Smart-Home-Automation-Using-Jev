@@ -44,23 +44,24 @@ function createMockTypeSafeClient(overrides?: {
         throw new Error(overrides.errorMessage || "Simulated TypeSafe API connection failure (HTTP 503)");
       }
 
-      return {
-        model: req.model || "jev-system-one",
-        answers: {
-          lock_main_door: { type: "noul", noul: 0.98 },
-          light_living_room: { type: "noul", noul: 0.95 },
-          tv_living_room: { type: "noul", noul: 0.99 },
-          curtain_living_room: { type: "noul", noul: 0.92 },
-          curtain_bedroom: { type: "noul", noul: 0.94 },
-          security_system: { type: "noul", noul: 0.97 },
-          fan_bedroom: {
+      const answers: Record<string, any> = {};
+      for (const [qId, qDef] of Object.entries(req.questions)) {
+        if (qDef.type === "choice") {
+          const choice = (qDef as any).criteria?.low ? "low" : "off";
+          answers[qId] = {
             type: "choice",
-            choice: "low",
+            choice,
             confidence: 0.91,
             probabilities: { off: 0.05, low: 0.85, medium: 0.08, high: 0.02 },
-          },
-          ac_living_room: { type: "noul", noul: 0.96 },
-        },
+          };
+        } else {
+          answers[qId] = { type: "noul", noul: 0.96 };
+        }
+      }
+
+      return {
+        model: req.model || "jev-system-one",
+        answers,
         usage: {
           input_tokens: 250,
           output_tokens: 48,
@@ -102,16 +103,16 @@ describe("Milestone 3.4 — Jev Benchmark Execution", () => {
     const mockClient = createMockTypeSafeClient();
     const engine = new JevDecisionEngine({ client: mockClient });
 
-    // Departure scenario is not currently supported by real Jev engine
-    const leaveScenario = getEvaluationScenario("normal-leave-01")!;
-    expect(leaveScenario).toBeDefined();
+    // Security lockdown scenario is outside the 7 supported smart home intent families
+    const unsupportedScenario = getEvaluationScenario("security-lockdown-01")!;
+    expect(unsupportedScenario).toBeDefined();
 
-    const isSupported = isScenarioSupportedByJev(leaveScenario, engine);
+    const isSupported = isScenarioSupportedByJev(unsupportedScenario, engine);
     expect(isSupported).toBe(false);
 
     const benchmark = await runJevBenchmark({
       engine,
-      scenarios: [leaveScenario],
+      scenarios: [unsupportedScenario],
     });
 
     expect(benchmark.summary.supportedScenarios).toBe(0);
@@ -229,8 +230,8 @@ describe("Milestone 3.4 — Jev Benchmark Execution", () => {
     });
 
     expect(benchmark.summary.totalScenarios).toBe(36);
-    expect(benchmark.summary.supportedScenarios).toBe(9);
-    expect(benchmark.summary.unsupportedScenarios).toBe(27);
+    expect(benchmark.summary.supportedScenarios).toBe(34);
+    expect(benchmark.summary.unsupportedScenarios).toBe(2);
 
     // Verify all 36 original scenarios in memory were not mutated
     expect(JSON.stringify(getAllEvaluationScenarios())).toBe(datasetSnapshot);

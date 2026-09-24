@@ -199,7 +199,71 @@ export class GoingToSleepPolicy {
       }
     }
 
-    const evaluationSummary = `Policy evaluated ${Object.keys(decisions).length} Jev decisions. Generated ${actions.length} action(s). Filtered ${skippedRedundantActions.length} redundant action(s).`;
+    // 9. Entrance Light (Power state)
+    if (decisions["light_entrance"]) {
+      const decision = decisions["light_entrance"];
+      const lightDevice = homeState.devices["light_entrance"];
+
+      if (lightDevice && decision.affirmative) {
+        const currentState = (lightDevice.state as LightState).power;
+        if (currentState === "ON") {
+          actions.push(createAction("light_entrance", "TURN_OFF"));
+          appliedDecisions.push("light_entrance: ON → TURN_OFF");
+        } else {
+          skippedRedundantActions.push("light_entrance: already OFF");
+        }
+      }
+    }
+
+    // 10. Kitchen Light (Power state)
+    if (decisions["light_kitchen"]) {
+      const decision = decisions["light_kitchen"];
+      const lightDevice = homeState.devices["light_kitchen"];
+
+      if (lightDevice && decision.affirmative) {
+        const currentState = (lightDevice.state as LightState).power;
+        if (currentState === "ON") {
+          actions.push(createAction("light_kitchen", "TURN_OFF"));
+          appliedDecisions.push("light_kitchen: ON → TURN_OFF");
+        } else {
+          skippedRedundantActions.push("light_kitchen: already OFF");
+        }
+      }
+    }
+
+    // 11. Study Light (Power state)
+    if (decisions["light_study"]) {
+      const decision = decisions["light_study"];
+      const lightDevice = homeState.devices["light_study"];
+
+      if (lightDevice && decision.affirmative) {
+        const currentState = (lightDevice.state as LightState).power;
+        if (currentState === "ON") {
+          actions.push(createAction("light_study", "TURN_OFF"));
+          appliedDecisions.push("light_study: ON → TURN_OFF");
+        } else {
+          skippedRedundantActions.push("light_study: already OFF");
+        }
+      }
+    }
+
+    // 12. Bedroom Main Light (Power state)
+    if (decisions["light_bedroom"]) {
+      const decision = decisions["light_bedroom"];
+      const lightDevice = homeState.devices["light_bedroom"];
+
+      if (lightDevice && decision.affirmative) {
+        const currentState = (lightDevice.state as LightState).power;
+        if (currentState === "ON") {
+          actions.push(createAction("light_bedroom", "TURN_OFF"));
+          appliedDecisions.push("light_bedroom: ON → TURN_OFF");
+        } else {
+          skippedRedundantActions.push("light_bedroom: already OFF");
+        }
+      }
+    }
+
+    const evaluationSummary = `GoingToSleepPolicy evaluated ${Object.keys(decisions).length} Jev decisions. Generated ${actions.length} action(s). Filtered ${skippedRedundantActions.length} redundant action(s).`;
 
     return {
       actions,

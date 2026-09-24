@@ -5,20 +5,20 @@ import path from "path";
 import fs from "fs";
 
 /**
- * CLI Runner for Milestone 3.4 — Jev Benchmark Execution.
+ * CLI Runner for Milestone 3.5 — Jev Benchmark Execution (Expanded Coverage).
  *
  * Command: npm run benchmark:jev
  *
  * Requirements:
  * - Requires a valid TYPESAFE_API_KEY configured in the environment or .env.local.
  * - If unconfigured, exits immediately with a clean, actionable error (zero fake data).
- * - Executes only genuinely supported scenarios (GOING_TO_SLEEP).
+ * - Executes genuinely supported scenarios across 7 intent families (34 supported, 2 unsupported).
  * - Explicitly marks unsupported scenarios as UNSUPPORTED.
  * - Saves a sanitized JSON benchmark artifact to artifacts/benchmarks/.
  */
 async function main() {
   console.log("==================================================");
-  console.log("HOMEMIND — JEV BENCHMARK EXECUTION (MILESTONE 3.4)");
+  console.log("HOMEMIND — JEV BENCHMARK EXECUTION (MILESTONE 3.5)");
   console.log("==================================================\n");
 
   // Load .env.local if present and not already in environment
