@@ -8,7 +8,7 @@
 
 ---
 
-## Current Status: Phase 2 — Jev Decision Engine Integration (In Progress)
+## Current Status: Phase 3 — Evaluation & Baseline Infrastructure (In Progress)
 
 - **Phase 1 (Simulation Foundation)**: COMPLETE and FROZEN.
 - **Phase 2 — Milestone 2.1 (Jev Provider Foundation)**: COMPLETE. Server-side TypeSafe Jev API client, schemas, secret sanitization, adapter.
@@ -18,20 +18,20 @@
 - **Phase 3 — Milestone 3.2 (Controlled Evaluation Scenario Dataset)**: COMPLETE. Controlled benchmark dataset of 36 provider-neutral scenarios across 7 categories.
 - **Phase 3 — Milestone 3.3 (Generic Evaluation Execution Pipeline)**: COMPLETE. Provider-neutral execution runner (`evaluateScenario`, `evaluateScenarios`) with high-resolution latency telemetry and strict state isolation.
 - **Phase 3 — Milestone 3.4 (Jev Benchmark Execution)**: COMPLETE. Automated benchmark execution layer with sanitized JSON artifact generation.
-- **Phase 3 — Milestone 3.5 (Expand Jev Decision Coverage)**: COMPLETE.
-  Expanded the real TypeSafe Jev decision pipeline across six additional intent families (7 total):
-  1. `GOING_TO_SLEEP` (9 scenarios)
-  2. `LEAVING_HOME` (7 scenarios)
-  3. `MOVIE_NIGHT` (6 scenarios)
-  4. `WORKING` (3 scenarios)
-  5. `COMING_HOME` (4 scenarios)
-  6. `RELAXING` (1 scenario)
-  7. `WAKING_UP` (4 scenarios)
-  Supported scenarios expanded from 9 to 34 out of 36 scenarios. Exactly 2 scenarios remain legitimately unsupported (`security-lockdown-01`, `ambiguous-night-ready-01`). All 7 policy implementations strictly enforce redundant action elimination and maintain zero imports from the evaluation dataset.
+- **Phase 3 — Milestone 3.5 (Expand Jev Decision Coverage)**: COMPLETE. Expanded real TypeSafe Jev decision pipeline across 7 intent families covering 34 supported scenarios and 2 explicitly unsupported scenarios.
+- **Phase 3 — Milestone 3.6 (Conventional LLM Decision Engine)**: COMPLETE.
+  Introduced a provider-independent conventional LLM DecisionEngine powered by a local Ollama runtime (`OLLAMA_BASE_URL`, `OLLAMA_MODEL`):
+  - Strictly implements the provider-neutral `DecisionEngine` contract (`provider: "LLM"`, `id: "llm-ollama"`).
+  - Pure local Ollama runtime via non-streaming `/api/chat` with JSON schema enforcement; zero cloud vendor SDKs, zero API keys, and zero paid inference dependencies.
+  - Zero dataset contamination: prompt template receives only the user intent and current home device state context (IDs, room, category, state, and capabilities); zero access to scenario IDs, ground-truth outcomes, or evaluation logic.
+  - Robust structured output validation: markdown code block stripping, JSON schema parsing, 18-device registry validation, and 14-action capability/boundary enforcement.
+  - State-aware redundancy normalization: actions matching existing device state are skipped and preserved in execution metadata (`skippedRedundantActions`).
+  - Strict zero-fallback error propagation: rejects any fallback to Jev, hardcoded rules, or fake mock actions if Ollama fails.
+  - **LLM-vs-Jev comparison is not yet implemented.** No comparison experiments, rankings, composite scores, or winner metrics exist.
 
 > [!NOTE]
 > **Research Integrity & Provider Independence:**
-> The evaluation contracts and scenario dataset are strictly decoupled from any specific AI provider or model. They observe output actions and final simulated states without bias. No LLM integration or benchmark comparison has been added in Milestone 3.5.
+> The evaluation contracts, scenario dataset, and execution runner are strictly decoupled from any specific AI provider or model. They observe output actions and final simulated states without bias. **LLM-vs-Jev comparison is not yet implemented.**
 
 ---
 
@@ -41,7 +41,7 @@
 | :--- | :--- | :--- | :--- |
 | **Phase 1** | **Simulation Foundation** | **COMPLETE** | Virtual home, 18 devices, deterministic engine, state management, manual controls, dashboard UI |
 | **Phase 2** | **Jev Decision Engine** | **COMPLETE** | TypeSafe Jev API integration, GOING_TO_SLEEP workflow, non-redundant policy, decision trace dashboard |
-| **Phase 3** | **Evaluation & Baseline Infrastructure** | **IN PROGRESS** | **Milestones 3.1–3.4 Complete**: Data model, 36 scenarios, execution pipeline, Jev benchmark<br>**Milestone 3.5 Complete**: Expanded Jev decision coverage across 7 intent families (34 supported, 2 unsupported)<br>*Next*: LLM baseline integration |
+| **Phase 3** | **Evaluation & Baseline Infrastructure** | **IN PROGRESS** | **Milestones 3.1–3.4 Complete**: Data model, 36 scenarios, execution pipeline, Jev benchmark<br>**Milestone 3.5 Complete**: Expanded Jev decision coverage across 7 intent families (34 supported, 2 unsupported)<br>**Milestone 3.6 Complete**: Conventional LLM Decision Engine via local Ollama baseline (zero comparison, zero rankings)<br>*Next*: Comparative evaluation execution |
 | **Phase 4** | **Jev vs. LLM Comparison** | *NOT STARTED* | Side-by-side automated benchmarking across scenario matrices |
 | **Phase 5** | **Evaluation & Analytics** | *NOT STARTED* | Latency, token cost, decision accuracy, and state consistency metrics |
 | **Phase 6** | **Final Demonstration** | *NOT STARTED* | Final presentation walkthrough, project defense artifacts, and documentation polish |
@@ -175,6 +175,24 @@ HomeMind includes a dedicated, reproducible benchmark execution layer (`runJevBe
 
 ---
 
+## Conventional LLM Decision Engine (Milestone 3.6)
+
+HomeMind provides a conventional LLM baseline decision engine implemented via a local Ollama runtime, conforming to the exact same provider-independent `DecisionEngine` interface as Jev:
+
+- **Provider-Independent Interface**: Implements `DecisionEngine` with `provider: "LLM"` and `id: "llm-ollama"`. Returns standardized `DecisionResult` with `source: "LLM"`.
+- **Pure Local Ollama Runtime**: Connects via HTTP to a local Ollama instance (default `http://127.0.0.1:11434`) using non-streaming `/api/chat` with JSON format enforcement. Zero cloud vendor SDKs (no OpenAI, Anthropic, Gemini, or OpenRouter), zero API keys, and zero paid inference costs.
+- **Dataset Decoupling & Research Integrity**: The LLM prompt context receives strictly the natural-language user intent and the current virtual home device state (device ID, name, room, category, current state, and capabilities). It has **zero access** to scenario IDs, required/forbidden/optional action rules, ground truth states, or benchmark evaluation contracts.
+- **Strict Structured Output & Multi-Stage Validation**:
+  1. *Markdown Stripping*: Robustly strips markdown code fences (````json ... ````) and extracts valid JSON.
+  2. *Schema Validation*: Verifies top-level structure (`intent`, `reasoning`, `actions[]`), action structure (`deviceId`, `actionType`, `value`, `reasoning`), and rejects non-array or extra invalid properties.
+  3. *Device Existence Validation*: Every referenced device ID is validated against the 18 registered HomeMind virtual devices.
+  4. *Action Capability & Value Validation*: Validates all 14 action types against device capabilities (e.g., `SET_BRIGHTNESS` requires dimmable light, `SET_TEMPERATURE` bound to 16°C–30°C, `SET_SPEED` bound to 0–3, `SET_POSITION` bound to 0–100%).
+- **State-Aware Redundancy Normalization**: Consistent with the Jev policy architecture, actions targeting already-achieved device states (e.g., locking an already locked door) are omitted from execution and recorded in `metadata.skippedRedundantActions`.
+- **Zero Fallback Integrity**: Errors (network drops, HTTP errors, timeouts, malformed JSON, schema violations, invalid devices) propagate immediately as typed errors (`OllamaError`, `LLMError`). The engine never falls back to Jev, hardcoded rules, or fabricated mock actions.
+- **Important**: **LLM-vs-Jev comparison is not yet implemented.** No comparative benchmarks, rankings, composite scores, or winner metrics exist in this milestone.
+
+---
+
 ## Technology Stack
 
 - **Framework**: Next.js 14+ (App Router)
@@ -191,7 +209,9 @@ HomeMind includes a dedicated, reproducible benchmark execution layer (`runJevBe
 - Node.js >= 18.x (Developed on v22.19.0)
 - npm >= 9.x
 
-### Environment Configuration (Phase 2)
+### Environment Configuration
+
+#### 1. TypeSafe Jev API (Phase 2 & Milestone 3.5)
 The TypeSafe Jev API integration requires a server-side API key.
 
 > [!CAUTION]
@@ -206,6 +226,21 @@ The TypeSafe Jev API integration requires a server-side API key.
    TYPESAFE_API_KEY=your_actual_api_key_here
    ```
 *(Note: `.env.local` is ignored by Git and will never be committed).*
+
+#### 2. Local Ollama LLM Runtime (Milestone 3.6)
+The conventional LLM DecisionEngine connects to a local Ollama instance without requiring any cloud API key or paid tokens:
+- **`OLLAMA_BASE_URL`**: Base URL for local Ollama HTTP API (defaults to `http://127.0.0.1:11434`).
+- **`OLLAMA_MODEL`**: Model identifier installed in local Ollama (defaults to `llama3.2:3b`).
+
+Make sure Ollama is installed and running locally:
+```bash
+ollama run llama3.2:3b
+```
+*(Optional `.env.local` configuration for custom endpoint/model)*:
+```env
+OLLAMA_BASE_URL=http://127.0.0.1:11434
+OLLAMA_MODEL=llama3.2:3b
+```
 
 ### Installation
 ```bash
@@ -246,8 +281,11 @@ npm run benchmark:jev
 
 ## Verification & Testing Coverage
 
-The automated test suite (`npm test`) covers **95 assertions across 14 test suites**:
-- **`jevBenchmark.test.ts`** (11 tests): Verifies Jev benchmark execution across the controlled 36-scenario dataset, honest capability classification (9 supported, 27 unsupported), zero action fabrication for unsupported scenarios, preservation of generic EvaluationResult metrics, latency telemetry, state isolation, engine ID retention, structured trace metadata attachment, safe error handling (SUPPORTED_FAILURE on API/simulation errors), credential sanitization, and independence of aggregate statistics.
+The automated test suite (`npm test`) covers **143 assertions across 17 test suites**:
+- **`llmDecisionEngine.test.ts`** (21 tests): Verifies `LLMDecisionEngine` against the provider-independent `DecisionEngine` contract, valid action generation, multi-device actions, no-op handling, markdown code block stripping, malformed JSON rejection, schema validation errors, unknown device ID rejection, invalid action type rejection, out-of-bounds value validation, strict error propagation with zero fallback, absence of fabricated confidence (`confidence: undefined`), preservation of raw validated `proposedActions` alongside `skippedRedundantActions`, provider metadata and latency capture, home state immutability, generic `EvaluationRunner` end-to-end integration, and architectural independence guardrail (asserting zero imports from `@/lib/evaluation`, `@/lib/policies`, `@/lib/jev`, or `@/lib/typesafe`).
+- **`ollamaClient.test.ts`** (10 tests): Verifies local `OllamaClient` initialization, default/custom configurations, non-streaming `/api/chat` with JSON format, model listing (`/api/tags`), health checking, timeout abort handling (`OllamaTimeoutError`), connection failure handling (`OllamaConnectionError`), HTTP error mapping (`OllamaApiError`), and missing model detection.
+- **`expandedJevPolicies.test.ts`** (17 tests): Verifies expanded Jev decision policies across all 7 supported intent families (`GOING_TO_SLEEP`, `LEAVING_HOME`, `MOVIE_NIGHT`, `WORKING`, `COMING_HOME`, `RELAXING`, `WAKING_UP`), redundant action skipping, context sensitivity, and zero imports from evaluation dataset.
+- **`jevBenchmark.test.ts`** (11 tests): Verifies Jev benchmark execution across the controlled 36-scenario dataset, honest capability classification (34 supported, 2 unsupported), zero action fabrication for unsupported scenarios, preservation of generic EvaluationResult metrics, latency telemetry, state isolation, engine ID retention, structured trace metadata attachment, safe error handling (SUPPORTED_FAILURE on API/simulation errors), credential sanitization, and independence of aggregate statistics.
 - **`evaluationRunner.test.ts`** (13 tests): Verifies the generic evaluation execution pipeline (`evaluateScenario`, `evaluateScenarios`), unmutated initial state isolation across consecutive executions, action application via `SimulationEngine`, timing telemetry (`decisionLatencyMs`, `simulationLatencyMs`, `evaluationLatencyMs`, `totalExecutionLatencyMs`), simulation rejection integrity (default throw, explicit throw, and non-throwing `success: false` / `evaluationResult: null` mode), structured `EvaluationRunnerError` propagation, no-op execution validation, multi-scenario dataset subset runs, and source code proof of zero vendor SDK imports or branching.
 - **`evaluationDataset.test.ts`** (10 tests): Verifies the 36-scenario controlled evaluation dataset, uniqueness of IDs, adherence to 7 categories, device and action validity against HomeMind configuration, independence of initial states, absence of vendor bias, and absence of overall scores/winners.
 - **`evaluationContract.test.ts`** (10 tests): Verifies provider-neutral evaluation contracts (`EvaluationScenario`, `ExpectedOutcome`, `ExpectedAction`, `EngineRun`, `EvaluationResult`), separation of expected device states from expected actions, action requirement semantics (`REQUIRED`, `FORBIDDEN`, `OPTIONAL`), acceptable alternatives representation, independent metric preservation without overall scores or winners, provider independence, and complete data immutability.
