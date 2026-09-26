@@ -21,6 +21,41 @@ import {
 } from "./types";
 import { computeStateFingerprint, canonicalStringify } from "./fingerprint";
 import { sanitizeForSerialization } from "./serialization";
+import {
+  ExperimentPersistenceManager,
+  observationToRecord,
+  recordToObservation,
+  buildExecutionId,
+  saveManifestSync,
+  loadManifestSync,
+  appendExecutionRecordSync,
+  loadExecutionRecordsSync,
+  validateManifestForResume,
+  reconstructExperimentReport,
+  findLatestIncompleteExperiment,
+  PersistenceError,
+  DuplicateExecutionError,
+  IncompatibleExperimentError,
+  MalformedRecordError,
+} from "./persistence";
+
+export {
+  ExperimentPersistenceManager,
+  observationToRecord,
+  recordToObservation,
+  buildExecutionId,
+  saveManifestSync,
+  loadManifestSync,
+  appendExecutionRecordSync,
+  loadExecutionRecordsSync,
+  validateManifestForResume,
+  reconstructExperimentReport,
+  findLatestIncompleteExperiment,
+  PersistenceError,
+  DuplicateExecutionError,
+  IncompatibleExperimentError,
+  MalformedRecordError,
+};
 import { JevDecisionEngine } from "@/lib/jev/JevDecisionEngine";
 import { LayaDecisionEngine } from "@/lib/laya/LayaDecisionEngine";
 import { LLMDecisionEngine } from "@/lib/llm/LLMDecisionEngine";
@@ -872,6 +907,55 @@ export async function runControlledExperiment(
     startedAt,
   };
 
+  // Hardened Incremental Persistence Setup (Milestone 3.10A)
+  const expDir =
+    options?.persistenceDir ||
+    path.join(
+      options?.outputDir || path.resolve(process.cwd(), "artifacts/benchmarks"),
+      experimentId
+    );
+  const persistence = new ExperimentPersistenceManager(expDir);
+
+  const manifestData = {
+    experimentId,
+    mode,
+    providerIds: activeProviders.map((p) => p.providerId),
+    providers: activeProviders.map((p) => {
+      const eng = p.engine as any;
+      return {
+        providerId: p.providerId,
+        engineId: eng.id || p.providerId,
+        engineName: eng.name,
+        modelId: typeof eng.getModel === "function" ? eng.getModel() : undefined,
+        checkpoint: typeof eng.getClient === "function" ? eng.getClient()?.getModel?.() : undefined,
+        repository: eng.provider === "LAYA" ? "convaiinnovations/laya" : undefined,
+        device: eng.provider === "LAYA" ? "cpu" : undefined,
+        runtime: eng.provider === "LAYA" ? "laya-serve 0.3.20" : undefined,
+      };
+    }),
+    datasetScenarioCount: scenarios.length,
+    datasetHash,
+    datasetVersion,
+    repetitions,
+    scheduledExecutions: scenarios.length * repetitions * activeProviders.length,
+    startedAt,
+    gitCommitHash,
+    persistenceFormat: "jsonl-v1",
+    status: "IN_PROGRESS" as const,
+  };
+
+  if (options?.resume && persistence.exists()) {
+    persistence.resume({
+      datasetHash,
+      datasetScenarioCount: scenarios.length,
+      mode,
+      providerIds: activeProviders.map((p) => p.providerId),
+      repetitions,
+    });
+  } else {
+    persistence.init(manifestData, true);
+  }
+
   const scenarioResults: ControlledScenarioRepetitionResult[] = [];
 
   for (let sIdx = 0; sIdx < scenarios.length; sIdx++) {
@@ -908,8 +992,17 @@ export async function runControlledExperiment(
         const engineId = engine.id || providerId;
         const supportInfo = providerSupportMap.get(providerId)!;
 
+        // Recovery / Skip check:
+        if (persistence.hasRecord(scenario.id, rep, providerId)) {
+          const persistedRec = persistence.getRecord(scenario.id, rep, providerId)!;
+          providerObservations.push(recordToObservation(persistedRec));
+          continue;
+        }
+
+        let observation: RepetitionObservation;
+
         if (!supportInfo.supported) {
-          providerObservations.push({
+          observation = {
             repetition: rep,
             providerId,
             engineId,
@@ -920,89 +1013,100 @@ export async function runControlledExperiment(
             proposedActions: [],
             skippedRedundantActions: [],
             evaluationResult: null,
-          });
-          continue;
-        }
+          };
+        } else {
+          const isolatedInitialState = JSON.parse(JSON.stringify(scenario.initialState));
+          const runFingerprint = computeStateFingerprint(isolatedInitialState);
 
-        const isolatedInitialState = JSON.parse(JSON.stringify(scenario.initialState));
-        const runFingerprint = computeStateFingerprint(isolatedInitialState);
+          const isolatedScenario: EvaluationScenario = {
+            ...scenario,
+            initialState: isolatedInitialState,
+          };
 
-        const isolatedScenario: EvaluationScenario = {
-          ...scenario,
-          initialState: isolatedInitialState,
-        };
-
-        try {
-          const runResult = await evaluateScenario(isolatedScenario, engine, {
-            evaluator: options?.evaluator,
-            simulationEngine: options?.simulationEngine,
-            throwOnSimulationError: false,
-          });
-
-          const proposedActions =
-            (runResult.run.decisionResult?.metadata?.proposedActions as any[]) ||
-            (runResult.run.decisionResult?.metadata?.appliedDecisions as any[]) ||
-            runResult.run.actions;
-
-          const skippedRedundantActions =
-            (runResult.run.decisionResult?.metadata?.skippedRedundantActions as any[]) || [];
-
-          if (runResult.success && runResult.evaluationResult) {
-            providerObservations.push({
-              repetition: rep,
-              providerId,
-              engineId,
-              status: "SUPPORTED_SUCCESS",
-              initialStateFingerprint: runFingerprint,
-              decisionResult: runResult.run.decisionResult,
-              evaluationResult: runResult.evaluationResult,
-              finalState: runResult.finalState,
-              timing: runResult.timing,
-              executableActions: runResult.run.actions,
-              proposedActions,
-              skippedRedundantActions,
-              providerMetadata: runResult.run.providerMetadata,
+          try {
+            const runResult = await evaluateScenario(isolatedScenario, engine, {
+              evaluator: options?.evaluator,
+              simulationEngine: options?.simulationEngine,
+              throwOnSimulationError: false,
             });
-          } else {
-            providerObservations.push({
+
+            const proposedActions =
+              (runResult.run.decisionResult?.metadata?.proposedActions as any[]) ||
+              (runResult.run.decisionResult?.metadata?.appliedDecisions as any[]) ||
+              runResult.run.actions;
+
+            const skippedRedundantActions =
+              (runResult.run.decisionResult?.metadata?.skippedRedundantActions as any[]) || [];
+
+            if (runResult.success && runResult.evaluationResult) {
+              observation = {
+                repetition: rep,
+                providerId,
+                engineId,
+                status: "SUPPORTED_SUCCESS",
+                initialStateFingerprint: runFingerprint,
+                decisionResult: runResult.run.decisionResult,
+                evaluationResult: runResult.evaluationResult,
+                finalState: runResult.finalState,
+                timing: runResult.timing,
+                executableActions: runResult.run.actions,
+                proposedActions,
+                skippedRedundantActions,
+                providerMetadata: runResult.run.providerMetadata,
+              };
+            } else {
+              observation = {
+                repetition: rep,
+                providerId,
+                engineId,
+                status: "SUPPORTED_FAILURE",
+                initialStateFingerprint: runFingerprint,
+                error:
+                  runResult.simulationErrors?.join("; ") ||
+                  runResult.run.error ||
+                  "Simulation rejection",
+                errorPhase: "SIMULATION",
+                decisionResult: runResult.run.decisionResult,
+                evaluationResult: null,
+                finalState: runResult.finalState,
+                timing: runResult.timing,
+                executableActions: runResult.run.actions,
+                proposedActions,
+                skippedRedundantActions,
+                providerMetadata: runResult.run.providerMetadata,
+              };
+            }
+          } catch (err: unknown) {
+            const errorMsg = (err as Error)?.message || String(err);
+            const errorPhase = (err as EvaluationRunnerError)?.phase || "DECISION";
+
+            observation = {
               repetition: rep,
               providerId,
               engineId,
               status: "SUPPORTED_FAILURE",
               initialStateFingerprint: runFingerprint,
-              error:
-                runResult.simulationErrors?.join("; ") ||
-                runResult.run.error ||
-                "Simulation rejection",
-              errorPhase: "SIMULATION",
-              decisionResult: runResult.run.decisionResult,
+              error: errorMsg,
+              errorPhase,
+              executableActions: [],
+              proposedActions: [],
+              skippedRedundantActions: [],
               evaluationResult: null,
-              finalState: runResult.finalState,
-              timing: runResult.timing,
-              executableActions: runResult.run.actions,
-              proposedActions,
-              skippedRedundantActions,
-              providerMetadata: runResult.run.providerMetadata,
-            });
+            };
           }
-        } catch (err: unknown) {
-          const errorMsg = (err as Error)?.message || String(err);
-          const errorPhase = (err as EvaluationRunnerError)?.phase || "DECISION";
-
-          providerObservations.push({
-            repetition: rep,
-            providerId,
-            engineId,
-            status: "SUPPORTED_FAILURE",
-            initialStateFingerprint: runFingerprint,
-            error: errorMsg,
-            errorPhase,
-            executableActions: [],
-            proposedActions: [],
-            skippedRedundantActions: [],
-            evaluationResult: null,
-          });
         }
+
+        // Immediately persist this execution to disk (durably flushed before proceeding)
+        const record = observationToRecord({
+          experimentId,
+          scenario,
+          repetition: rep,
+          provider,
+          observation,
+        });
+        persistence.appendRecord(record);
+        options?.onRecordPersisted?.(record);
+        providerObservations.push(observation);
       }
 
       repetitionResults.push({
@@ -1021,12 +1125,15 @@ export async function runControlledExperiment(
     });
   }
 
+  // Mark manifest as COMPLETED
+  persistence.markCompleted();
+
   // Compute descriptive aggregates strictly for active providers
   const aggregates = activeProviders.map((p) =>
     computeProviderAggregates(p.providerId, p.engine.id || p.providerId, scenarios, scenarioResults)
   );
 
-  return {
+  const report: ControlledExperimentReport = {
     experimentId,
     generatedAt: new Date().toISOString(),
     mode,
@@ -1035,6 +1142,12 @@ export async function runControlledExperiment(
     scenarioResults,
     aggregates,
   };
+
+  // Persist summary.json and backward-compatible single JSON report
+  persistence.saveSummary(report);
+  saveControlledExperimentReport(report, expDir);
+
+  return report;
 }
 
 /**

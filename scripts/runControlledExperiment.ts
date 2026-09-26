@@ -11,6 +11,11 @@ import {
   runControlledExperiment,
   saveControlledExperimentReport,
 } from "../src/lib/evaluation/comparison/experiment";
+import {
+  findLatestIncompleteExperiment,
+  ExperimentPersistenceManager,
+  reconstructExperimentReport,
+} from "../src/lib/evaluation/comparison/persistence";
 import { ComparativeProviderEntry, ExperimentMode } from "../src/lib/evaluation/comparison/types";
 
 /**
@@ -45,6 +50,10 @@ async function main() {
   const isLLMReadiness = process.argv.includes("--llm-readiness");
   const isLayaReadiness = process.argv.includes("--laya-readiness");
   const isPreflight = process.argv.includes("--preflight");
+  const isResume = process.argv.includes("--resume");
+  const isReconstruct = process.argv.includes("--reconstruct");
+  const expIdIdx = process.argv.findIndex((a) => a === "--experiment-id");
+  const customExpId = expIdIdx !== -1 && process.argv[expIdIdx + 1] ? process.argv[expIdIdx + 1] : undefined;
 
   const mode: ExperimentMode = isPreflight
     ? "PREFLIGHT_ONLY"
@@ -56,7 +65,7 @@ async function main() {
 
   console.log("================================================================================");
   console.log("HOMEMIND — MULTI-PROVIDER CONTROLLED EXPERIMENT RUNNER");
-  console.log(`MODE: ${mode}`);
+  console.log(`MODE: ${mode}${isResume ? " [RESUME ENABLED]" : ""}`);
   console.log("================================================================================\n");
 
   // Load .env.local if present and not already in environment
@@ -150,6 +159,46 @@ async function main() {
     return;
   }
 
+  // Helper to resolve experiment ID when resuming or starting fresh
+  const resolveResumeExperimentId = (targetMode: ExperimentMode): string | undefined => {
+    if (customExpId) return customExpId;
+    if (isResume) {
+      const latest = findLatestIncompleteExperiment(
+        path.resolve(process.cwd(), "artifacts/benchmarks"),
+        targetMode
+      );
+      if (latest) {
+        console.log(`[RESUME] Found existing incomplete experiment to resume: ${latest.experimentId}`);
+        return latest.experimentId;
+      } else {
+        console.log(`[RESUME] No existing incomplete experiment found for mode ${targetMode}. Starting fresh experiment.`);
+      }
+    }
+    return undefined;
+  };
+
+  // Handler: RECONSTRUCT_ONLY
+  if (isReconstruct) {
+    const benchmarksDir = path.resolve(process.cwd(), "artifacts/benchmarks");
+    const targetExpId =
+      customExpId ||
+      findLatestIncompleteExperiment(benchmarksDir, mode)?.experimentId;
+
+    if (!targetExpId) {
+      console.error("[ERROR] No experiment ID specified or found in artifacts/benchmarks to reconstruct.");
+      process.exit(1);
+    }
+
+    const targetDir = path.join(benchmarksDir, targetExpId);
+    console.log(`[INFO] Reconstructing report from persistence directory: ${targetDir}`);
+    const report = reconstructExperimentReport(targetDir, scenarios);
+    const saveResult = saveControlledExperimentReport(report);
+    console.log(`[OK] Reconstructed report for experiment: ${report.experimentId}`);
+    console.log(`[OK] Saved reconstructed report to: ${saveResult.filePath}\n`);
+    printReportSummary(report);
+    return;
+  }
+
   // Handler: LLM_ONLY_READINESS
   if (isLLMReadiness) {
     if (!preflight.allPassed) {
@@ -178,11 +227,17 @@ async function main() {
       },
     ];
 
+    const resumeExpId = resolveResumeExperimentId("LLM_ONLY_READINESS");
     const report = await runControlledExperiment(scenarios, providers, {
       mode: "LLM_ONLY_READINESS",
       repetitions: 5,
+      experimentId: resumeExpId,
+      resume: isResume && Boolean(resumeExpId),
       onScenarioProgress: (idx, total, id) => {
         process.stdout.write(`\r[PROGRESS] Running Scenario ${idx}/${total}: ${id.padEnd(35)}`);
+      },
+      onRecordPersisted: (rec) => {
+        process.stdout.write(` -> Persisted execution [${rec.executionId}] (${rec.status})\n`);
       },
     });
     console.log("\n");
@@ -228,11 +283,17 @@ async function main() {
       },
     ];
 
+    const resumeExpId = resolveResumeExperimentId("LAYA_ONLY_READINESS");
     const report = await runControlledExperiment(scenarios, providers, {
       mode: "LAYA_ONLY_READINESS",
       repetitions: 5,
+      experimentId: resumeExpId,
+      resume: isResume && Boolean(resumeExpId),
       onScenarioProgress: (idx, total, id) => {
         process.stdout.write(`\r[PROGRESS] Running Scenario ${idx}/${total}: ${id.padEnd(35)}`);
+      },
+      onRecordPersisted: (rec) => {
+        process.stdout.write(` -> Persisted execution [${rec.executionId}] (${rec.status})\n`);
       },
     });
     console.log("\n");
@@ -305,11 +366,17 @@ async function main() {
     },
   ];
 
+  const resumeExpId = resolveResumeExperimentId("FULL_COMPARISON");
   const report = await runControlledExperiment(scenarios, providers, {
     mode: "FULL_COMPARISON",
     repetitions: 5,
+    experimentId: resumeExpId,
+    resume: isResume && Boolean(resumeExpId),
     onScenarioProgress: (idx, total, id) => {
       process.stdout.write(`\r[PROGRESS] Running Scenario ${idx}/${total}: ${id.padEnd(35)}`);
+    },
+    onRecordPersisted: (rec) => {
+      process.stdout.write(` -> Persisted execution [${rec.executionId}] (${rec.status})\n`);
     },
   });
   console.log("\n");

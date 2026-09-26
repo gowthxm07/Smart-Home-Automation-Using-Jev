@@ -323,4 +323,84 @@ export interface ControlledExperimentOptions extends ComparativeRunnerOptions {
   outputDir?: string;
   onScenarioProgress?: (scenarioIndex: number, totalScenarios: number, scenarioId: string) => void;
   onRepetitionProgress?: (repetition: number, totalRepetitions: number, providerId: string) => void;
+  // Hardened persistence & crash recovery options (Milestone 3.10A)
+  resume?: boolean;
+  persistenceDir?: string;
+  onRecordPersisted?: (record: PersistedExecutionRecord) => void;
+}
+
+/**
+ * Provider descriptor within the experiment manifest.
+ */
+export interface ExperimentManifestProviderInfo {
+  providerId: string;
+  engineId: string;
+  engineName?: string;
+  modelId?: string;
+  checkpoint?: string;
+  repository?: string;
+  device?: string;
+  runtime?: string;
+}
+
+/**
+ * Authoritative experiment manifest created at experiment initialization.
+ */
+export interface ExperimentManifest {
+  experimentId: string;
+  mode: ExperimentMode;
+  providerIds: string[];
+  providers: ExperimentManifestProviderInfo[];
+  datasetScenarioCount: number;
+  datasetHash: string;
+  datasetVersion: string;
+  repetitions: number;
+  scheduledExecutions: number;
+  startedAt: string;
+  completedAt?: string;
+  gitCommitHash: string;
+  persistenceFormat: string; // e.g. "jsonl-v1"
+  status: "IN_PROGRESS" | "COMPLETED" | "INTERRUPTED" | "FAILED";
+}
+
+/**
+ * Fully hydrated individual scenario execution record persisted immediately to disk (JSONL).
+ * Guarantees zero research data loss on process termination, crash, or interruption.
+ */
+export interface PersistedExecutionRecord {
+  executionId: string; // Unique deterministic key: `${experimentId}:${scenarioId}:${repetition}:${providerId}`
+  experimentId: string;
+  scenarioId: string;
+  scenarioCategory: string;
+  repetition: number;
+  providerId: string;
+  engineId: string;
+  status: ComparativeScenarioStatus;
+  unsupportedReason?: string;
+  checkpoint?: string;
+  repository?: string;
+  device?: string;
+  runtime?: string;
+  initialStateFingerprint: string;
+  intent: string;
+  rawAnswers?: unknown;
+  probabilities?: Record<string, number> | unknown;
+  modelReportedConfidence?: number;
+  confidence?: number;
+  proposedActions: ReadonlyArray<unknown>;
+  skippedRedundantActions: ReadonlyArray<unknown>;
+  executableActions: ReadonlyArray<Action>;
+  simulatedActions?: ReadonlyArray<Action>;
+  simulationResult?: unknown;
+  simulationSuccess?: boolean;
+  simulationErrors?: string[];
+  evaluationResult?: EvaluationResult | null;
+  timing?: EvaluationTiming;
+  decisionLatencyMs?: number;
+  simulationLatencyMs?: number;
+  evaluationLatencyMs?: number;
+  totalLatencyMs?: number;
+  error?: string;
+  errorPhase?: string;
+  executedAt: string;
 }
