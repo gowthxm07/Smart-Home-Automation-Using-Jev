@@ -11,7 +11,12 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
-    "benchmark:jev": "npx tsx scripts/runJevBenchmark.ts"
+    "benchmark:jev": "npx tsx scripts/runJevBenchmark.ts",
+    "experiment:comparison": "npx tsx scripts/runControlledExperiment.ts",
+    "experiment:llm-readiness": "npx tsx scripts/runControlledExperiment.ts --llm-readiness",
+    "experiment:laya-readiness": "npx tsx scripts/runControlledExperiment.ts --laya-readiness",
+    "experiment:preflight": "npx tsx scripts/runControlledExperiment.ts --preflight",
+    "experiment:dry-run": "npx tsx scripts/runControlledExperiment.ts --dry-run"
   },
   "dependencies": {
     "lucide-react": "^0.453.0",

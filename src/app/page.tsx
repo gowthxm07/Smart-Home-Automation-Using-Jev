@@ -4,6 +4,7 @@ import React from "react";
 import { HomeProvider } from "@/context/HomeContext";
 import { Header } from "@/components/layout/Header";
 import { IntentSection } from "@/components/intent/IntentSection";
+import { ProviderControlsPanel } from "@/components/providers/ProviderControlsPanel";
 import { VirtualFloorPlan } from "@/components/home/VirtualFloorPlan";
 import { ManualOverridePanel } from "@/components/controls/ManualOverridePanel";
 import { JevDecisionTracePanel } from "@/components/jev/JevDecisionTracePanel";
@@ -36,15 +37,18 @@ export default function HomeMindDashboard() {
             </div>
             <div className="flex items-center gap-2 shrink-0">
               <span className="px-2.5 py-1 rounded-full bg-purple-500/10 font-mono text-[10px] text-purple-300 border border-purple-500/30 font-semibold">
-                Phase 2: Jev Decision Engine Active
+                Multi-Engine Platform (Jev • Laya • LLM)
               </span>
             </div>
           </div>
 
-          {/* Section 1: User Intent & Scenarios */}
+          {/* Section 1: AI Decision Engines & Provider Controls */}
+          <ProviderControlsPanel />
+
+          {/* Section 2: User Intent & Scenarios */}
           <IntentSection />
 
-          {/* Section 2: Jev Decision Trace & Observability (Milestone 2.3) */}
+          {/* Section 3: Jev Decision Trace & Observability (Milestone 2.3) */}
           <JevDecisionTracePanel />
 
           {/* Section 3: Manual Device Overrides */}

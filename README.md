@@ -29,11 +29,33 @@
   - Explicit three-state execution status: `SUPPORTED_SUCCESS`, `SUPPORTED_FAILURE`, `UNSUPPORTED`.
   - Preserves independent multi-dimensional metrics without composite scores, rankings, or winner declarations.
   - Reproducibility metadata capturing dynamic Git commit hash, environment, and dataset version.
-  - **The comparative experiment has NOT yet been executed.** No comparative benchmarks, rankings, or winner metrics exist.
+- **Phase 3 — Milestone 3.8 (Multi-Provider Decision Platform & Empirical Evaluation Infrastructure)**: IN PROGRESS / MULTI-PROVIDER PLATFORM & PRE-FLIGHT VERIFIED.
+  Extended HomeMind into a provider-neutral multi-engine decision platform supporting:
+  1. **TypeSafe Jev**: Decision-oriented AI System-1 API with calibrated confidence scores.
+  2. **Laya**: Convai Innovations open-weight non-autoregressive decision model (ModernBERT-large, 421M params) running via local `laya-serve` daemon.
+  3. **Conventional LLM**: Local Ollama autoregressive baseline (`llama3.2:3b`) with uncalibrated confidence.
+  - **Provider Registry & Orchestration Strategy Pattern**: Decoupled registration (`ProviderRegistry`, `createDefaultProviderRegistry`) with strict separation of user **enablement** (UI toggle) vs. verified backend **availability** (`canExecute = isEnabled && isAvailable`).
+  - **Server-Side In-Memory TypeSafe Jev Credential Store**: Secure in-memory runtime activation (`/api/credentials/typesafe`) allowing dynamic key configuration without writing secrets to disk, browser localStorage, SQLite, or Git. Key is never reflected or serialized.
+  - **Context-Sensitive Natural Language & Occupancy Protocol**: Provider-neutral human and pet occupancy contexts (`PetOccupant`, `HumanOccupant`, `PetClimatePreference`) respecting explicit pet preferences (e.g., 23°C) and security bypass modes without fabricating veterinary knowledge.
+  - **Four Distinct Experiment Execution Modes**:
+    1. `FULL_COMPARISON`: Multi-engine comparative experiment requiring >= 2 available providers.
+    2. `LLM_ONLY_READINESS`: Real Ollama LLM baseline pipeline validation across 36 scenarios × 5 repetitions.
+    3. `LAYA_ONLY_READINESS`: Real Laya System-1 non-autoregressive decision pipeline validation across 36 scenarios × 5 repetitions.
+    4. `PREFLIGHT_ONLY`: Validates configuration, reachability, and infrastructure without executing providers.
+  - **Provider Availability Classification**:
+    - `AVAILABLE`: Provider configured and service reachable.
+    - `UNAVAILABLE_CONFIGURATION`: Missing required credentials/configuration (e.g. `TYPESAFE_API_KEY` missing due to portal capacity limits).
+    - `UNAVAILABLE_SERVICE`: Service daemon unreachable or network down.
+    - `UNSUPPORTED`: Engine does not implement scenario capability.
+  - 5 independent repetitions per scenario/provider.
+  - Cryptographic state fingerprinting across all repetitions and providers.
+  - Independent descriptive distributions (mean, median, min, max, standard deviation) for all action, state accuracy, and latency metrics.
+  - Strict absence of composite scoring, rankings, winners, or superiority labels.
+  - Mode-specific artifact filenames: `controlled-experiment-full_<id>.json`, `controlled-experiment-llm-only_<id>.json`, `controlled-experiment-laya-only_<id>.json`, and `controlled-experiment-dryrun_<id>.json`.
 
 > [!NOTE]
 > **Research Integrity & Provider Independence:**
-> The evaluation contracts, scenario dataset, execution runner, and comparative infrastructure are strictly decoupled from any specific AI provider or model. They observe output actions and final simulated states without bias. **Comparative benchmarks have not yet been executed.**
+> The evaluation contracts, scenario dataset, execution runner, and comparative infrastructure are strictly decoupled from any specific AI provider or model. They observe output actions and final simulated states without bias. Neither provider is substituted with proxies or alternative models. **Comparative benchmarks have not yet been executed.**
 
 ---
 
@@ -43,8 +65,8 @@
 | :--- | :--- | :--- | :--- |
 | **Phase 1** | **Simulation Foundation** | **COMPLETE** | Virtual home, 18 devices, deterministic engine, state management, manual controls, dashboard UI |
 | **Phase 2** | **Jev Decision Engine** | **COMPLETE** | TypeSafe Jev API integration, GOING_TO_SLEEP workflow, non-redundant policy, decision trace dashboard |
-| **Phase 3** | **Evaluation & Baseline Infrastructure** | **IN PROGRESS** | **Milestones 3.1–3.4 Complete**: Data model, 36 scenarios, execution pipeline, Jev benchmark<br>**Milestone 3.5 Complete**: Expanded Jev decision coverage across 7 intent families (34 supported, 2 unsupported)<br>**Milestone 3.6 Complete**: Conventional LLM Decision Engine via local Ollama baseline<br>**Milestone 3.7 Complete**: Controlled comparative evaluation infrastructure (zero comparison run, zero rankings)<br>*Next*: Comparative benchmark execution |
-| **Phase 4** | **Jev vs. LLM Comparison** | *NOT STARTED* | Side-by-side automated benchmarking across scenario matrices |
+| **Phase 3** | **Multi-Provider Platform & Evaluation Infrastructure** | **IN PROGRESS** | **Milestones 3.1–3.4 Complete**: Data model, 36 scenarios, execution pipeline, Jev benchmark<br>**Milestone 3.5 Complete**: Expanded Jev decision coverage across 7 intent families (34 supported, 2 unsupported)<br>**Milestone 3.6 Complete**: Conventional LLM Decision Engine via local Ollama baseline<br>**Milestone 3.7 Complete**: Controlled comparative evaluation infrastructure<br>**Milestone 3.8 Architecture Complete**: Multi-provider platform (Jev, Laya, LLM), in-memory credentials, occupancy context, 217 tests passing<br>*Next*: Live comparative research experiment |
+| **Phase 4** | **Empirical Comparative Experiment** | *NOT STARTED* | Live multi-provider automated benchmarking across 36 controlled scenarios × 5 repetitions |
 | **Phase 5** | **Evaluation & Analytics** | *NOT STARTED* | Latency, token cost, decision accuracy, and state consistency metrics |
 | **Phase 6** | **Final Demonstration** | *NOT STARTED* | Final presentation walkthrough, project defense artifacts, and documentation polish |
 
@@ -52,33 +74,35 @@
 
 ## Architectural Pipeline
 
-To preserve scientific rigor in future comparisons, both Jev and LLMs will interact with the virtual home through the exact same action pipeline:
+To preserve scientific rigor in comparisons, all decision engines interact with the virtual home through the exact same action pipeline:
 
 ```
-                  User Intent (Natural Language)
-                                │
-                                ▼
-                       DecisionEngine (Interface)
-                        │                     │
-                        ▼ (Phase 2)           ▼ (Phase 3)
-                JevDecisionEngine      LLMDecisionEngine
-                        │                     │
-                        └──────────┬──────────┘
-                                   ▼
-                             DecisionResult
-                                   ▼
-                                Action[]
-                                   ▼
-                           SimulationEngine
-                   (Deterministic Validator & State Machine)
-                                   ▼
-                         Central HomeState
-                   (18 Virtual Devices across 5 Rooms)
+                          User Intent (Natural Language)
+                                        │
+                                        ▼
+                            DecisionEngine (Interface)
+                        ┌───────────────┼───────────────┐
+                        ▼               ▼               ▼
+                JevDecisionEngine  LayaDecisionEngine LLMDecisionEngine
+                  (TypeSafe AI)    (ModernBERT 421M)   (Local Ollama)
+                        │               │               │
+                        └───────────────┼───────────────┘
+                                        ▼
+                                  DecisionResult
+                                        ▼
+                                     Action[]
+                                        ▼
+                                SimulationEngine
+                        (Deterministic Validator & State Machine)
+                                        ▼
+                              Central HomeState
+                        (18 Virtual Devices across 5 Rooms)
 ```
 
 ### Core Architecture Components:
-- **`DecisionEngine` Interface** (`src/types/engine.ts`): Unified contract implemented by both Jev and LLM engines in subsequent phases.
-- **`Action` Model** (`src/types/action.ts`): Typed atomic commands specifying `deviceId`, `actionType`, `value`, `source` (`MANUAL` | `JEV` | `LLM` | `SYSTEM`), and `timestamp`.
+- **`DecisionEngine` Interface** (`src/types/engine.ts`): Unified contract implemented by all providers (`JEV`, `LAYA`, `LLM`).
+- **`ProviderRegistry`** (`src/lib/providers/registry.ts`): Strategy Pattern orchestrator decoupling engine execution from hardcoded conditionals, managing enablement and verified availability.
+- **`Action` Model** (`src/types/action.ts`): Typed atomic commands specifying `deviceId`, `actionType`, `value`, `source` (`MANUAL` | `JEV` | `LLM` | `LAYA` | `SYSTEM`), and `timestamp`.
 - **`SimulationEngine`** (`src/lib/simulationEngine.ts`): Pure, deterministic state machine that validates device existence, capability constraints, and boundary conditions before immutably applying state transitions.
 - **`HomeContext`** (`src/context/HomeContext.tsx`): React Context providing a single source of truth for the entire application, eliminating disconnected component state.
 - **`SimulationClock`** (`src/components/layout/SimulationClock.tsx`): Controllable simulation clock supporting real-time sync, simulated speed multipliers (1x, 5x, 60x), and time-advance offsets.
@@ -207,7 +231,21 @@ HomeMind incorporates a provider-neutral comparative execution framework (`src/l
 - **Provider Metadata Preservation**: Retains provider-specific telemetry (Jev decision traces, LLM `proposedActions` before redundancy filtering, `skippedRedundantActions`, token metrics) without forcing uniform internal representations.
 - **Sanitized Serialization**: Deterministic JSON serialization (`serializeComparativeReport`) with automatic credential and secret pattern redaction.
 - **Scientific Objectivity**: Zero composite scores, zero rankings, zero winner metrics.
-- **Important**: **The comparative benchmark experiment has not yet been executed.** No `benchmark:comparison` command exists.
+
+---
+
+## Controlled Empirical Jev vs Conventional LLM Experiment (Milestone 3.8)
+
+HomeMind provides a fully automated, auditable experimental runner (`runControlledExperiment`) implementing the empirical comparison protocol between TypeSafe Jev and a conventional local LLM (Ollama):
+
+- **5-Repetition Protocol (`REPETITIONS = 5`)**: Each scenario/provider combination is executed up to 5 independent times (36 scenarios × 2 providers × 5 repetitions = up to 360 observations) to capture execution variability and latency distributions.
+- **Strict Input & State Equivalence**: Both providers receive the identical intent string and independent deep-cloned replicas of the scenario's initial `HomeState`. SHA-256 state fingerprints prove equivalent starting conditions across all repetitions.
+- **Raw Action Accounting**: Separately records `proposedActions`, `executableActions`, and `skippedRedundantActions` for every repetition.
+- **Descriptive Statistical Aggregations**: Computes arithmetic mean, median, min, max, and sample standard deviation independently per provider and per metric (action comparison metrics, state accuracy ratios, decision/simulation/evaluation/total latencies).
+- **15-Point Pre-Flight Validation (`runPreFlightValidation`)**: Enforces 15 rigorous checks before any live provider call. Halts immediately if any required check fails (e.g. missing API keys, unreachable daemon, uninstalled model).
+- **Pre-Flight Dry Run Orchestration (`runPreFlightDryRun`)**: Executes an offline 360-run dry run using mock providers to verify 100% of pipeline mechanics without network calls or credential exposure.
+- **Secret-Safe CLI**: `npm run experiment:comparison` provides automated pre-flight gating. Use `npm run experiment:comparison -- --dry-run` to run the non-live mock orchestration.
+- **Zero Qualitative Bias**: Strictly forbids composite score formulas (`JevScore`, `LLMScore`, `overallScore`), rankings, winner declarations, or superiority claims.
 
 ---
 
@@ -229,12 +267,15 @@ HomeMind incorporates a provider-neutral comparative execution framework (`src/l
 
 ### Environment Configuration
 
-#### 1. TypeSafe Jev API (Phase 2 & Milestone 3.5)
-The TypeSafe Jev API integration requires a server-side API key.
+#### 1. TypeSafe Jev API Configuration
+The TypeSafe Jev API integration requires a server-side API key. It can be provided via persistent `.env.local` or dynamically via the secure in-memory server credential store:
 
-> [!CAUTION]
-> **Server-Side Secret Only**: Never prefix the key with `NEXT_PUBLIC_` or reference it in client components. The client architecture sanitizes credentials and strips secrets from all logs and error messages.
+**Option A — In-Memory Runtime Activation (Dashboard UI or API):**
+- Click **"Configure Key"** directly in the dashboard AI Engines panel or send `POST /api/credentials/typesafe` with `{ "apiKey": "..." }`.
+- Key is held strictly in server RAM and automatically cleared upon server restart.
+- Never written to browser `localStorage`, disk, or Git.
 
+**Option B — Local Environment Variable:**
 1. Copy the example configuration template:
    ```bash
    cp .env.example .env.local
@@ -245,7 +286,19 @@ The TypeSafe Jev API integration requires a server-side API key.
    ```
 *(Note: `.env.local` is ignored by Git and will never be committed).*
 
-#### 2. Local Ollama LLM Runtime (Milestone 3.6)
+#### 2. Local Laya System-1 Runtime
+Laya is a self-hosted, non-autoregressive decision model by Convai Innovations based on ModernBERT-large (421M parameters):
+- Install the Python package:
+  ```bash
+  pip install laya
+  ```
+- Launch the local FastAPI inference daemon:
+  ```bash
+  laya-serve --port 8081
+  ```
+- Defaults to `http://127.0.0.1:8081` (probed via `GET /health` and `POST /v1/systemone`). Custom endpoints can be configured via `LAYA_BASE_URL` in `.env.local`.
+
+#### 3. Local Ollama LLM Runtime
 The conventional LLM DecisionEngine connects to a local Ollama instance without requiring any cloud API key or paid tokens:
 - **`OLLAMA_BASE_URL`**: Base URL for local Ollama HTTP API (defaults to `http://127.0.0.1:11434`).
 - **`OLLAMA_MODEL`**: Model identifier installed in local Ollama (defaults to `llama3.2:3b`).
@@ -293,13 +346,51 @@ npm run typecheck
 ```bash
 npm run benchmark:jev
 ```
-*(Requires `TYPESAFE_API_KEY` in environment or `.env.local`)*
+*(Requires `TYPESAFE_API_KEY` in environment or active runtime credential)*
+
+### Running the Controlled Empirical Experiment (Milestone 3.8)
+
+HomeMind provides explicit commands supporting the multi-mode experimental protocol:
+
+```bash
+# 1. Full Comparative Experiment (Real Jev, Laya, and Ollama LLM)
+# Requires at least 2 providers to be fully AVAILABLE. If Jev is UNAVAILABLE_CONFIGURATION, cleanly halts.
+npm run experiment:comparison
+
+# 2. LLM-Only Pipeline Readiness & Baseline Run
+# Validates the Ollama LLM pipeline across all 36 scenarios × 5 repetitions.
+# Explicitly disclaimed: Zero Jev observations, zero Jev benchmarks, zero comparative metrics.
+npm run experiment:llm-readiness
+
+# 3. Laya-Only Pipeline Readiness & Baseline Run
+# Validates the Laya System-1 non-autoregressive decision model across all 36 scenarios × 5 repetitions.
+# Explicitly disclaimed: Zero Jev observations, zero Jev benchmarks, zero comparative metrics.
+npm run experiment:laya-readiness
+
+# 4. Pre-Flight Infrastructure & Configuration Validation Only
+# Validates 15 pre-flight checks and provider reachability without executing scenario runs.
+npm run experiment:preflight
+
+# 5. Offline Mock Dry-Run Orchestration
+# Executes the full protocol across 36 scenarios × 2 mock providers × 5 repetitions (0 network calls).
+npm run experiment:dry-run
+```
 
 ---
 
 ## Verification & Testing Coverage
 
-The automated test suite (`npm test`) covers **162 assertions across 18 test suites**:
+The automated test suite (`npm test`) covers **217 assertions across 20 test suites**:
+- **`multiProviderPlatform.test.ts`** (28 tests): Verifies the provider-neutral multi-engine platform:
+  - Universal `ProviderRegistry` and dynamic registration of JEV, LAYA, and LLM engines with complete model metadata.
+  - Strict separation of user enablement (UI configuration map) vs. verified backend availability (`canExecute = isEnabled && isAvailable`).
+  - Safe error classifications: missing Jev API key returns `UNAVAILABLE_CONFIGURATION`; unreachable Laya daemon returns `UNAVAILABLE_SERVICE`; unreachable Ollama daemon returns `UNAVAILABLE_SERVICE`.
+  - Server-side in-memory runtime TypeSafe API key store: RAM storage only, input validation, runtime-over-env precedence, zero persistence to disk/DB/git, and secure `/api/credentials/typesafe` routes that never reflect the secret key.
+  - Laya System-1 non-autoregressive decision engine: 34 supported scenarios, 2 explicit unsupported out-of-domain scenarios, calibrated confidence scores, and redundant action elimination.
+  - Context-sensitive natural language & occupancy protocol: provider-neutral human/pet occupancy models, pet climate preferences (e.g. 23°C), motion alarm bypass, zero veterinary hallucinations when preferences are absent, and complete isolation of the pet demo context from the frozen dataset.
+  - Multi-engine execution isolation: independent deep clones of `HomeState` for each provider, zero cross-provider state leakage or mutation, identical natural language intent delivered to all engines, fault isolation, and API route validation.
+  - Methodological integrity: 36 frozen scenarios, SHA-256 hash invariant (`66de3242d1ba6583dc385a2999f8f8ba556a1f52cf5862cc7f223c9cdbfc0329`), independent side-by-side reporting, and zero rankings, composite scores, or winner declarations.
+- **`controlledExperiment.test.ts`** (27 tests): Verifies Milestone 3.8 controlled empirical experiment infrastructure: dataset immutability hashing (`computeDatasetHash`), descriptive statistics math (mean, median, min, max, standard deviation), 15-point pre-flight validation protocol (`runPreFlightValidation`), 360-run offline mock dry-run orchestration (`runPreFlightDryRun`), per-repetition deep-cloned state isolation, state fingerprint consistency across repetitions and providers, explicit `UNSUPPORTED` status propagation, failure simulation capture (`SUPPORTED_FAILURE` with `errorPhase`), independent descriptive aggregate calculation without composite scores or rankings, preservation of `proposedActions`, `executableActions`, and `skippedRedundantActions`, zero credential persistence, provider availability state classification (`AVAILABLE`, `UNAVAILABLE_CONFIGURATION`, `UNAVAILABLE_SERVICE`, `UNSUPPORTED`), pre-flight blocking on missing `TYPESAFE_API_KEY`, N/A handling in `LLM_ONLY_READINESS`, zero Jev observations in LLM readiness mode, scenario run rejection in `PREFLIGHT_ONLY`, zero OpenRouter or proxy references in Jev code, and distinct artifact filename generation by mode.
 - **`comparativeRunner.test.ts`** (19 tests): Verifies provider-neutral comparative execution (`runComparativeScenario`, `runComparativeBenchmark`), delivery of exact same intent, deep-cloned independent initial state isolation, deterministic SHA-256 state fingerprinting (`computeStateFingerprint`), sensitivity to state modifications, isolation against state mutations during execution, unified `SimulationEngine` and `StandardEvaluationEngine` processing, independent latency recording (decision, simulation, evaluation, total), provider metadata retention (Jev traces, LLM `proposedActions` and `skippedRedundantActions`, uncalibrated confidence), explicit `UNSUPPORTED` status preservation, graceful failure handling (`SUPPORTED_FAILURE`), zero fallback behavior, zero answer-key leakage, sanitized report serialization, 100% dataset immutability, and confirms zero winner, ranking, or composite score metrics.
 - **`llmDecisionEngine.test.ts`** (21 tests): Verifies `LLMDecisionEngine` against the provider-independent `DecisionEngine` contract, valid action generation, multi-device actions, no-op handling, markdown code block stripping, malformed JSON rejection, schema validation errors, unknown device ID rejection, invalid action type rejection, out-of-bounds value validation, strict error propagation with zero fallback, absence of fabricated confidence (`confidence: undefined`), preservation of raw validated `proposedActions` alongside `skippedRedundantActions`, provider metadata and latency capture, home state immutability, generic `EvaluationRunner` end-to-end integration, and architectural independence guardrail (asserting zero imports from `@/lib/evaluation`, `@/lib/policies`, `@/lib/jev`, or `@/lib/typesafe`).
 - **`ollamaClient.test.ts`** (10 tests): Verifies local `OllamaClient` initialization, default/custom configurations, non-streaming `/api/chat` with JSON format, model listing (`/api/tags`), health checking, timeout abort handling (`OllamaTimeoutError`), connection failure handling (`OllamaConnectionError`), HTTP error mapping (`OllamaApiError`), and missing model detection.

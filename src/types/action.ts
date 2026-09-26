@@ -4,7 +4,7 @@
  * MANUAL user overrides, JEV (Phase 2), LLM baseline (Phase 3), or SYSTEM events.
  */
 
-export type ActionSource = "MANUAL" | "JEV" | "LLM" | "SYSTEM";
+export type ActionSource = "MANUAL" | "JEV" | "LLM" | "LAYA" | "SYSTEM";
 
 export type ActionType =
   | "TURN_ON"

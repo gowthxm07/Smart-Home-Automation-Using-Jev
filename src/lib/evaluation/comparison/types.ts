@@ -113,3 +113,214 @@ export interface ComparativeRunnerOptions {
 export interface ComparativeBenchmarkOptions extends ComparativeRunnerOptions {
   experimentId?: string;
 }
+
+/**
+ * Supported execution modes for the controlled experiment infrastructure.
+ *
+ * 1. FULL_COMPARISON: Real Jev + real Ollama LLM. The actual research experiment. Requires both providers.
+ * 2. LLM_ONLY_READINESS: Real Ollama LLM only. Pipeline validation and baseline readiness.
+ *    STRICT RESEARCH INTEGRITY: NOT a Jev comparison. Contains zero Jev observations or comparative metrics.
+ * 3. PREFLIGHT_ONLY: Validates infrastructure without executing either provider.
+ */
+export type ExperimentMode =
+  | "FULL_COMPARISON"
+  | "LLM_ONLY_READINESS"
+  | "LAYA_ONLY_READINESS"
+  | "PREFLIGHT_ONLY";
+
+/**
+ * Explicit provider availability status before scenario execution begins.
+ *
+ * - AVAILABLE: Provider is fully configured, reachable, and operational.
+ * - UNAVAILABLE_CONFIGURATION: Required configuration is missing (e.g., TYPESAFE_API_KEY missing).
+ *   This is NOT an unsupported scenario and NOT a simulation failure.
+ * - UNAVAILABLE_SERVICE: Endpoint is unreachable, network dropped, or daemon not running.
+ * - UNSUPPORTED: Scenario workflow is outside the provider's active domain capabilities.
+ */
+export type ProviderAvailabilityStatus =
+  | "AVAILABLE"
+  | "UNAVAILABLE_CONFIGURATION"
+  | "UNAVAILABLE_SERVICE"
+  | "UNSUPPORTED";
+
+/**
+ * Diagnostic record of a provider's readiness and configuration state.
+ */
+export interface ProviderAvailabilityInfo {
+  providerId: string;
+  engineId: string;
+  status: ProviderAvailabilityStatus;
+  detail: string;
+}
+
+/**
+ * Protocol configuration for a controlled empirical experiment.
+ */
+export interface ExperimentalProtocolConfig {
+  mode: ExperimentMode;
+  disclaimer?: string;
+  datasetVersion: string;
+  datasetScenarioCount: number;
+  datasetHash: string;
+  repetitions: number;
+  providerIds: string[];
+  providerAvailability?: Record<string, ProviderAvailabilityInfo>;
+  jevConfiguration?: {
+    engineId: string;
+    engineName: string;
+    defaultModel: string;
+    baseUrl: string;
+    timeoutMs: number;
+  };
+  layaConfiguration?: {
+    engineId: string;
+    engineName: string;
+    model: string;
+    baseUrl: string;
+    timeoutMs: number;
+  };
+  llmConfiguration?: {
+    engineId: string;
+    engineName: string;
+    model: string;
+    baseUrl: string;
+    timeoutMs: number;
+    promptVersion: string;
+    temperature: number;
+    seed?: number;
+  };
+  timeoutConfiguration: {
+    jevTimeoutMs?: number;
+    layaTimeoutMs?: number;
+    llmTimeoutMs?: number;
+    perScenarioTimeoutMs: number;
+  };
+  executionOrder: string;
+  gitCommitHash: string;
+  startedAt: string;
+}
+
+/**
+ * Single repetition observation for a provider on a given scenario.
+ */
+export interface RepetitionObservation {
+  repetition: number;
+  providerId: string;
+  engineId: string;
+  status: ComparativeScenarioStatus;
+  unsupportedReason?: string;
+  initialStateFingerprint: string;
+  decisionResult?: Readonly<DecisionResult>;
+  evaluationResult?: EvaluationResult | null;
+  finalState?: Readonly<HomeState>;
+  timing?: EvaluationTiming;
+  proposedActions: ReadonlyArray<unknown>;
+  executableActions: ReadonlyArray<Action>;
+  skippedRedundantActions: ReadonlyArray<unknown>;
+  providerMetadata?: Record<string, unknown>;
+  error?: string;
+  errorPhase?: "DECISION" | "SIMULATION" | "EVALUATION" | "VALIDATION" | string;
+}
+
+/**
+ * Results of 5 independent repetitions across all providers for a single scenario.
+ */
+export interface ControlledScenarioRepetitionResult {
+  scenarioId: string;
+  scenarioName: string;
+  category: string;
+  intent: string;
+  initialStateFingerprint: string;
+  repetitions: Array<{
+    repetition: number;
+    providers: RepetitionObservation[];
+  }>;
+}
+
+/**
+ * Independent descriptive statistics for a numeric metric distribution.
+ */
+export interface DescriptiveMetricDistribution {
+  count: number;
+  mean: number;
+  median: number;
+  min: number;
+  max: number;
+  standardDeviation: number;
+}
+
+/**
+ * Provider-specific descriptive aggregates without composite scores or rankings.
+ */
+export interface ProviderDescriptiveAggregates {
+  providerId: string;
+  engineId: string;
+  coverage: {
+    totalScenarios: number;
+    supportedScenarios: number;
+    unsupportedScenarios: number;
+    totalRepetitionAttempts: number;
+    successfulRuns: number;
+    failedRuns: number;
+    unsupportedRuns: number;
+  };
+  actionDistributions: {
+    matchedRequiredActions: DescriptiveMetricDistribution;
+    missedRequiredActions: DescriptiveMetricDistribution;
+    executedForbiddenActions: DescriptiveMetricDistribution;
+    executedOptionalActions: DescriptiveMetricDistribution;
+    unnecessaryActions: DescriptiveMetricDistribution;
+    redundantActions: DescriptiveMetricDistribution;
+  };
+  stateAccuracyDistribution: DescriptiveMetricDistribution;
+  timingDistributions: {
+    decisionLatencyMs: DescriptiveMetricDistribution;
+    simulationLatencyMs: DescriptiveMetricDistribution;
+    evaluationLatencyMs: DescriptiveMetricDistribution;
+    totalExecutionLatencyMs: DescriptiveMetricDistribution;
+  };
+}
+
+/**
+ * Full sanitized report of a controlled empirical experiment.
+ */
+export interface ControlledExperimentReport {
+  experimentId: string;
+  generatedAt: string;
+  mode: ExperimentMode;
+  disclaimer?: string;
+  protocol: ExperimentalProtocolConfig;
+  scenarioResults: ControlledScenarioRepetitionResult[];
+  aggregates: ProviderDescriptiveAggregates[];
+}
+
+/**
+ * Individual pre-flight validation check.
+ */
+export interface PreFlightCheckItem {
+  id: number;
+  name: string;
+  passed: boolean;
+  detail: string;
+}
+
+/**
+ * Overall pre-flight validation result.
+ */
+export interface PreFlightValidationResult {
+  allPassed: boolean;
+  checks: PreFlightCheckItem[];
+  providerAvailability: Record<string, ProviderAvailabilityInfo>;
+}
+
+/**
+ * Options for configuring the controlled experiment runner.
+ */
+export interface ControlledExperimentOptions extends ComparativeRunnerOptions {
+  experimentId?: string;
+  mode?: ExperimentMode;
+  repetitions?: number;
+  outputDir?: string;
+  onScenarioProgress?: (scenarioIndex: number, totalScenarios: number, scenarioId: string) => void;
+  onRepetitionProgress?: (repetition: number, totalRepetitions: number, providerId: string) => void;
+}

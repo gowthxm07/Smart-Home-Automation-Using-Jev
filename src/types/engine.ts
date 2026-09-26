@@ -25,7 +25,7 @@ export interface DecisionResult {
 export interface DecisionEngine {
   readonly id: string;
   readonly name: string;
-  readonly provider: "JEV" | "LLM";
+  readonly provider: "JEV" | "LLM" | "LAYA" | string;
   evaluate(intent: string, homeState: HomeState): Promise<DecisionResult>;
 }
 

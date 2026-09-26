@@ -15,6 +15,8 @@ import {
   sanitizeSecret,
 } from "./errors";
 
+import { getEffectiveTypeSafeApiKey } from "./credentials";
+
 const DEFAULT_BASE_URL = "https://api.typesafe.ai";
 const DEFAULT_TIMEOUT_MS = 15000;
 
@@ -29,7 +31,7 @@ export class TypeSafeClient {
   private readonly fetchFn: typeof fetch;
 
   constructor(config: TypeSafeClientConfig = {}) {
-    const key = config.apiKey || (typeof process !== "undefined" ? process.env.TYPESAFE_API_KEY : undefined);
+    const key = config.apiKey || getEffectiveTypeSafeApiKey();
     this.apiKey = key?.trim() || "";
 
     const url =
