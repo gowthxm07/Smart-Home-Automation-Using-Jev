@@ -88,9 +88,15 @@ export class LayaDecisionEngine implements DecisionEngine {
     // 3. Map System-1 answers to concrete actions
     const policyResult = translateLayaDecisionsToActions(intent, homeState, response);
 
+    const routingInfo = (response.routing as Record<string, unknown>) || {};
+    const checkpoint = (routingInfo.model as string) || this.client.getModel();
+    const repository = (routingInfo.repo as string) || "convaiinnovations/laya";
+
     const metadata: LayaDecisionMetadata = {
       provider: "laya",
-      model: response.model || this.client.getModel(),
+      model: checkpoint,
+      checkpoint,
+      repository,
       runtime: "laya-serve (FastAPI ASGI / Python PyTorch)",
       architecture: "ModernBERT-large non-autoregressive decision model (421M params)",
       latencyMs: decisionTimeMs,

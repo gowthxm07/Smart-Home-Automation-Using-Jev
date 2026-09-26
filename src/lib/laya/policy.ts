@@ -50,7 +50,18 @@ export function buildLayaQuestions(intent: string, homeState: HomeState): Record
     intent_family: {
       type: "choice",
       question: "Which primary automation family best matches the user's intent?",
+      instructions: "Which primary automation family best matches the user's intent?",
       options: [
+        "GOING_TO_SLEEP",
+        "LEAVING_HOME",
+        "MOVIE_NIGHT",
+        "WORKING",
+        "COMING_HOME",
+        "RELAXING",
+        "WAKING_UP",
+        "OTHER",
+      ],
+      criteria: [
         "GOING_TO_SLEEP",
         "LEAVING_HOME",
         "MOVIE_NIGHT",
@@ -64,27 +75,34 @@ export function buildLayaQuestions(intent: string, homeState: HomeState): Record
     turn_off_main_lighting: {
       type: "noul",
       question: "Should main living area lighting be powered off?",
+      instructions: "Should main living area lighting be powered off?",
     },
     lock_entrance_deadbolt: {
       type: "noul",
       question: "Should the exterior deadbolt be locked?",
+      instructions: "Should the exterior deadbolt be locked?",
     },
     arm_security_system: {
       type: "noul",
       question: "Should the security system be armed?",
+      instructions: "Should the security system be armed?",
     },
     security_mode: {
       type: "choice",
       question: "If arming security, which mode is appropriate?",
+      instructions: "If arming security, which mode is appropriate?",
       options: ["STAY", "AWAY"],
+      criteria: ["STAY", "AWAY"],
     },
     manage_climate: {
       type: "noul",
       question: "Should climate control (AC) be adjusted or maintained?",
+      instructions: "Should climate control (AC) be adjusted or maintained?",
     },
     preserve_pet_environment: {
       type: "noul",
       question: `A pet is ${hasPetsAtHome ? "PRESENT" : "ABSENT"} in the home. Should pet comfort conditions be preserved?`,
+      instructions: `A pet is ${hasPetsAtHome ? "PRESENT" : "ABSENT"} in the home. Should pet comfort conditions be preserved?`,
     },
   };
 }
@@ -109,22 +127,43 @@ export function translateLayaDecisionsToActions(
   if (rawFamily) {
     if (typeof rawFamily === "string") {
       intentFamily = rawFamily;
+    } else if (typeof rawFamily.choice === "string") {
+      intentFamily = rawFamily.choice;
     } else if (typeof rawFamily.value === "string") {
       intentFamily = rawFamily.value;
     }
-    if (typeof rawFamily.confidence === "number") {
-      confidenceSum += rawFamily.confidence;
+    const conf =
+      typeof rawFamily.confidence === "number"
+        ? rawFamily.confidence
+        : typeof rawFamily.answer_confidence === "number"
+        ? rawFamily.answer_confidence
+        : undefined;
+    if (conf !== undefined) {
+      confidenceSum += conf;
       confidenceCount++;
     }
   }
 
-  // Extract boolean answer helper
+  // Extract boolean answer helper (supports Laya noul, choice booleans, and legacy/mock values)
   const getBoolAnswer = (key: string, defaultVal: boolean): boolean => {
     const raw = answers[key] as any;
     if (!raw) return defaultVal;
-    if (typeof raw.confidence === "number") {
-      confidenceSum += raw.confidence;
+    const conf =
+      typeof raw.confidence === "number"
+        ? raw.confidence
+        : typeof raw.answer_confidence === "number"
+        ? raw.answer_confidence
+        : undefined;
+    if (conf !== undefined) {
+      confidenceSum += conf;
       confidenceCount++;
+    }
+    if (typeof raw.noul === "number") return raw.noul >= 0.5;
+    if (typeof raw.noul === "boolean") return raw.noul;
+    if (typeof raw.choice === "string") {
+      const upper = raw.choice.toUpperCase();
+      if (upper === "TRUE" || upper === "YES") return true;
+      if (upper === "FALSE" || upper === "NO") return false;
     }
     if (typeof raw === "boolean") return raw;
     if (typeof raw.value === "boolean") return raw.value;
@@ -132,6 +171,26 @@ export function translateLayaDecisionsToActions(
     if (raw.value === "NO" || raw.value === "False" || raw.value === 0) return false;
     return defaultVal;
   };
+
+  // Extract security mode choice if evaluated
+  const rawSecurityMode = answers["security_mode"] as any;
+  let evaluatedSecurityMode: "STAY" | "AWAY" | undefined = undefined;
+  if (rawSecurityMode) {
+    const modeVal = rawSecurityMode.choice || rawSecurityMode.value;
+    if (modeVal === "STAY" || modeVal === "AWAY") {
+      evaluatedSecurityMode = modeVal;
+    }
+    const conf =
+      typeof rawSecurityMode.confidence === "number"
+        ? rawSecurityMode.confidence
+        : typeof rawSecurityMode.answer_confidence === "number"
+        ? rawSecurityMode.answer_confidence
+        : undefined;
+    if (conf !== undefined) {
+      confidenceSum += conf;
+      confidenceCount++;
+    }
+  }
 
   const turnOffLighting = getBoolAnswer("turn_off_main_lighting", true);
   const lockDeadbolt = getBoolAnswer("lock_entrance_deadbolt", true);
@@ -453,14 +512,14 @@ export function translateLayaDecisionsToActions(
       break;
   }
 
-  // Calculate calibrated confidence
+  // Calculate average reported decision confidence across evaluated keys
   const confidence =
     confidenceCount > 0
       ? Math.round((confidenceSum / confidenceCount) * 100) / 100
       : undefined;
 
   const reasoning = `Laya System-1 non-autoregressive decision model evaluated intent family as "${intentFamily}"${
-    confidence !== undefined ? ` with calibrated confidence ${confidence}` : ""
+    confidence !== undefined ? ` with reported confidence ${confidence}` : ""
   }.${
     petContextRecognized ? " Preserved pet comfort and occupancy parameters." : ""
   } Dispatched ${proposedActions.length} actions; skipped ${skippedRedundantActions.length} redundant operations.`;

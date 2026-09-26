@@ -3,6 +3,7 @@ import {
   LayaHealthResponse,
   LayaSystemOneRequest,
   LayaSystemOneResponse,
+  toLayaWireQuestions,
 } from "./types";
 import {
   LayaApiError,
@@ -12,8 +13,8 @@ import {
 } from "./errors";
 
 export const DEFAULT_LAYA_BASE_URL = "http://127.0.0.1:8081";
-export const DEFAULT_LAYA_MODEL = "convaiinnovations/laya-modernbert-large";
-export const DEFAULT_LAYA_TIMEOUT_MS = 15000;
+export const DEFAULT_LAYA_MODEL = "english";
+export const DEFAULT_LAYA_TIMEOUT_MS = 60000;
 
 /**
  * LayaClient handles communication with the local or remote Laya System-1 server.
@@ -152,9 +153,11 @@ export class LayaClient {
       headers["Authorization"] = `Bearer ${this.apiKey}`;
     }
 
+    const wireQuestions = toLayaWireQuestions(request.questions);
+
     const payload = {
       state: request.state,
-      questions: request.questions,
+      questions: wireQuestions,
       model: request.model || this.model,
     };
 
