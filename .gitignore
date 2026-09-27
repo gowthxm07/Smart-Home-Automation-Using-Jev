@@ -32,5 +32,6 @@ next-env.d.ts
 # Local machine helpers
 powershell.cmd
 
-# Benchmark output artifacts
+# Benchmark and analysis output artifacts
 artifacts/benchmarks/**
+artifacts/analysis/**

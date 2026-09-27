@@ -16,7 +16,8 @@
     "experiment:llm-readiness": "npx tsx scripts/runControlledExperiment.ts --llm-readiness",
     "experiment:laya-readiness": "npx tsx scripts/runControlledExperiment.ts --laya-readiness",
     "experiment:preflight": "npx tsx scripts/runControlledExperiment.ts --preflight",
-    "experiment:dry-run": "npx tsx scripts/runControlledExperiment.ts --dry-run"
+    "experiment:dry-run": "npx tsx scripts/runControlledExperiment.ts --dry-run",
+    "analysis:baseline": "npx tsx scripts/generateBaselineAnalysis.ts"
   },
   "dependencies": {
     "lucide-react": "^0.453.0",
