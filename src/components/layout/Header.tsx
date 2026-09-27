@@ -1,12 +1,17 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useHome } from "@/context/HomeContext";
 import { SimulationClock } from "./SimulationClock";
 import { Cpu, ShieldCheck, Activity, Layers, Radio } from "lucide-react";
 
 export const Header: React.FC = () => {
   const { homeState, activeDevicesCount, totalDevicesCount } = useHome();
+  const pathname = usePathname();
+  const isResearch = pathname?.startsWith("/research");
+  const isHome = !isResearch;
 
   return (
     <header className="glass-panel border-b border-slate-800 sticky top-0 z-40 px-4 sm:px-8 py-3.5 backdrop-blur-xl">
@@ -38,8 +43,32 @@ export const Header: React.FC = () => {
           </div>
         </div>
 
-        {/* Status Indicators & Clock */}
+        {/* Navigation & Status Indicators */}
         <div className="flex flex-wrap items-center gap-2.5 sm:gap-3 w-full lg:w-auto justify-between lg:justify-end">
+          {/* Main Navigation Toggle */}
+          <nav aria-label="Main Navigation" className="flex items-center gap-1 p-1 rounded-xl bg-slate-900/90 border border-slate-800 text-xs font-semibold">
+            <Link
+              href="/"
+              className={`px-3 py-1.5 rounded-lg transition-colors ${
+                isHome
+                  ? "bg-blue-600 text-white shadow-sm"
+                  : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/60"
+              }`}
+            >
+              Virtual Home
+            </Link>
+            <Link
+              href="/research"
+              className={`px-3 py-1.5 rounded-lg transition-colors ${
+                isResearch
+                  ? "bg-blue-600 text-white shadow-sm"
+                  : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/60"
+              }`}
+            >
+              Research
+            </Link>
+          </nav>
+
           {/* Status Badge */}
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-900/90 border border-slate-800 text-xs">
             <Radio className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
