@@ -10,6 +10,7 @@ import { INITIAL_ROOMS } from "@/lib/rooms.config";
 import { simulationEngine } from "@/lib/simulationEngine";
 import { DecisionResult } from "@/types/engine";
 import { JevDecisionTrace } from "@/lib/jev/trace";
+import { ProviderRuntimeStatus } from "@/lib/providers";
 
 interface HomeContextValue {
   homeState: HomeState;
@@ -58,6 +59,26 @@ interface HomeContextValue {
   latestSkippedActions: string[];
   runJevAutomation: (intentText?: string) => Promise<boolean>;
   clearJevTrace: () => void;
+
+  // Milestone 3.13C: Provider-Neutral Intent Dispatch & Multi-Provider Platform
+  providers: ProviderRuntimeStatus[];
+  providerEnablement: Record<string, boolean>;
+  fetchProviderStatuses: () => Promise<void>;
+  toggleProvider: (providerId: string) => void;
+  executableProviders: ProviderRuntimeStatus[];
+  executableProvidersCount: number;
+  activeExecutionState: "IDLE" | "EVALUATING" | "COMPLETED" | "ERROR";
+  executionError: string | null;
+  latestMultiEngineResults: Record<
+    string,
+    { success: boolean; decisionResult?: DecisionResult; error?: string }
+  > | null;
+  primaryFloorPlanEngine: string | null;
+  setPrimaryFloorPlanEngine: (providerId: string | null) => void;
+  runIntentAutomation: (intentText?: string) => Promise<boolean>;
+  clearExecutionTrace: () => void;
+  providersLoading: boolean;
+  providersError: string | null;
 }
 
 const HomeContext = createContext<HomeContextValue | undefined>(undefined);
@@ -85,6 +106,76 @@ export function HomeProvider({ children }: { children: React.ReactNode }) {
   const [latestAppliedActions, setLatestAppliedActions] = useState<Action[]>([]);
   const [latestSkippedActions, setLatestSkippedActions] = useState<string[]>([]);
 
+  // Provider-Neutral Management & Execution (Milestone 3.13C)
+  const [providers, setProviders] = useState<ProviderRuntimeStatus[]>([]);
+  const [providersLoading, setProvidersLoading] = useState<boolean>(true);
+  const [providersError, setProvidersError] = useState<string | null>(null);
+  const [providerEnablement, setProviderEnablement] = useState<Record<string, boolean>>({
+    JEV: true,
+    LAYA: true,
+    LLM: true,
+  });
+  const [activeExecutionState, setActiveExecutionState] = useState<
+    "IDLE" | "EVALUATING" | "COMPLETED" | "ERROR"
+  >("IDLE");
+  const [executionError, setExecutionError] = useState<string | null>(null);
+  const [latestMultiEngineResults, setLatestMultiEngineResults] = useState<Record<
+    string,
+    { success: boolean; decisionResult?: DecisionResult; error?: string }
+  > | null>(null);
+  const [primaryFloorPlanEngine, setPrimaryFloorPlanEngine] = useState<string | null>(null);
+
+  const fetchProviderStatuses = useCallback(async () => {
+    try {
+      setProvidersLoading(true);
+      setProvidersError(null);
+      const res = await fetch("/api/providers");
+      if (!res.ok) {
+        throw new Error(`Failed to fetch provider statuses (HTTP ${res.status})`);
+      }
+      const data = await res.json();
+      if (data.success && Array.isArray(data.providers)) {
+        setProviders(data.providers);
+      }
+    } catch (err: unknown) {
+      setProvidersError((err as Error)?.message || "Failed to contact provider registry.");
+    } finally {
+      setProvidersLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchProviderStatuses();
+  }, [fetchProviderStatuses]);
+
+  const toggleProvider = useCallback((providerId: string) => {
+    setProviderEnablement((prev) => {
+      const current = prev[providerId] ?? true;
+      return {
+        ...prev,
+        [providerId]: !current,
+      };
+    });
+  }, []);
+
+  const effectiveProviders = useMemo(() => {
+    return providers.map((p) => {
+      const isEnabled = providerEnablement[p.providerId] ?? true;
+      const isAvailable = p.availability?.status === "AVAILABLE";
+      return {
+        ...p,
+        enabled: isEnabled,
+        canExecute: isEnabled && isAvailable,
+      };
+    });
+  }, [providers, providerEnablement]);
+
+  const executableProviders = useMemo(() => {
+    return effectiveProviders.filter((p) => p.canExecute);
+  }, [effectiveProviders]);
+
+  const executableProvidersCount = executableProviders.length;
+
   const clearJevTrace = useCallback(() => {
     setLatestDecisionResult(null);
     setLatestDecisionTrace(null);
@@ -93,6 +184,13 @@ export function HomeProvider({ children }: { children: React.ReactNode }) {
     setJevExecutionState("IDLE");
     setJevError(null);
   }, []);
+
+  const clearExecutionTrace = useCallback(() => {
+    clearJevTrace();
+    setLatestMultiEngineResults(null);
+    setActiveExecutionState("IDLE");
+    setExecutionError(null);
+  }, [clearJevTrace]);
 
   const runJevAutomation = useCallback(async (intentText?: string): Promise<boolean> => {
     const targetIntent = (intentText || homeState.currentIntentText || "I'm going to sleep.").trim();
@@ -137,6 +235,109 @@ export function HomeProvider({ children }: { children: React.ReactNode }) {
       return false;
     }
   }, [homeState]);
+
+  const runIntentAutomation = useCallback(
+    async (intentText?: string): Promise<boolean> => {
+      const targetIntent = (intentText || homeState.currentIntentText || "").trim();
+
+      if (!targetIntent) {
+        setExecutionError("Please specify a user intent or select a scenario.");
+        return false;
+      }
+
+      if (executableProvidersCount === 0) {
+        setExecutionError(
+          "No AI engines are currently enabled and available for execution. Please check provider configuration."
+        );
+        return false;
+      }
+
+      setActiveExecutionState("EVALUATING");
+      setExecutionError(null);
+
+      try {
+        const res = await fetch("/api/providers", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            intent: targetIntent,
+            homeState,
+            enabledProviders: providerEnablement,
+          }),
+        });
+
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          throw new Error(data.error || `HTTP ${res.status}: Multi-engine evaluation failed.`);
+        }
+
+        const results = (data.results || {}) as Record<
+          string,
+          { success: boolean; decisionResult?: DecisionResult; error?: string }
+        >;
+
+        setLatestMultiEngineResults(results);
+
+        // Backward compatibility: If Jev was executed, populate Jev observability trace
+        if (results["JEV"]) {
+          if (results["JEV"].success && results["JEV"].decisionResult) {
+            const jevResult = results["JEV"].decisionResult;
+            setLatestDecisionResult(jevResult);
+            setLatestDecisionTrace((jevResult.metadata?.decisionTrace as JevDecisionTrace) || null);
+            setJevExecutionState("COMPLETED");
+            setJevError(null);
+          } else if (!results["JEV"].success) {
+            setJevError(results["JEV"].error || "Jev evaluation failed.");
+            setJevExecutionState("ERROR");
+          }
+        }
+
+        // Apply actions to Virtual Home Floor Plan
+        // Safe multi-provider policy:
+        // - Single provider: its actions apply directly.
+        // - Multiple providers: designated primary engine applies (or first successful provider).
+        // - ZERO ranking or winner evaluation.
+        const executedProviders: string[] = data.executedProviders || [];
+        const successfulProviders = executedProviders.filter(
+          (p) => results[p]?.success && results[p]?.decisionResult
+        );
+
+        if (successfulProviders.length === 0) {
+          throw new Error("All executed AI engines returned execution errors.");
+        }
+
+        let chosenEngineId = successfulProviders[0];
+        if (primaryFloorPlanEngine && successfulProviders.includes(primaryFloorPlanEngine)) {
+          chosenEngineId = primaryFloorPlanEngine;
+        }
+
+        const chosenDecision = results[chosenEngineId]?.decisionResult;
+        if (chosenDecision) {
+          const actions = chosenDecision.actions || [];
+          setLatestAppliedActions(actions);
+          setLatestSkippedActions(
+            (chosenDecision.metadata?.skippedRedundantActions as string[]) || []
+          );
+
+          if (actions.length > 0) {
+            setHomeState((prev) => {
+              const { finalState } = simulationEngine.applyBatchActions(actions, prev);
+              return finalState;
+            });
+          }
+        }
+
+        setActiveExecutionState("COMPLETED");
+        return true;
+      } catch (err: unknown) {
+        const msg = (err as Error)?.message || "Intent execution failed.";
+        setExecutionError(msg);
+        setActiveExecutionState("ERROR");
+        return false;
+      }
+    },
+    [homeState, executableProvidersCount, providerEnablement, primaryFloorPlanEngine]
+  );
 
   // Simulation clock ticker
   useEffect(() => {
@@ -506,6 +707,22 @@ export function HomeProvider({ children }: { children: React.ReactNode }) {
     latestSkippedActions,
     runJevAutomation,
     clearJevTrace,
+    // Milestone 3.13C: Provider-Neutral Intent Dispatch & Multi-Provider Platform
+    providers: effectiveProviders,
+    providerEnablement,
+    fetchProviderStatuses,
+    toggleProvider,
+    executableProviders,
+    executableProvidersCount,
+    activeExecutionState,
+    executionError,
+    latestMultiEngineResults,
+    primaryFloorPlanEngine,
+    setPrimaryFloorPlanEngine,
+    runIntentAutomation,
+    clearExecutionTrace,
+    providersLoading,
+    providersError,
   };
 
   return <HomeContext.Provider value={value}>{children}</HomeContext.Provider>;

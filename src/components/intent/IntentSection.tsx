@@ -1,10 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import { useHome } from "@/context/HomeContext";
 import { PREDEFINED_SCENARIOS } from "@/lib/scenarios.config";
 import { ScenarioPreset } from "@/types/scenario";
-import { PhaseNoticeModal } from "./PhaseNoticeModal";
 import {
   Sparkles,
   Send,
@@ -15,12 +14,21 @@ import {
   Home,
   Coffee,
   Sun,
-  Info,
+  AlertCircle,
+  Cpu,
 } from "lucide-react";
 
 export const IntentSection: React.FC = () => {
-  const { homeState, selectScenario, setIntentText, runJevAutomation, jevExecutionState } = useHome();
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const {
+    homeState,
+    selectScenario,
+    setIntentText,
+    runIntentAutomation,
+    activeExecutionState,
+    executableProvidersCount,
+    executionError,
+    providersLoading,
+  } = useHome();
 
   const getScenarioIcon = (iconName: string) => {
     switch (iconName) {
@@ -45,8 +53,15 @@ export const IntentSection: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!homeState.currentIntentText.trim()) return;
-    setIsModalOpen(true);
+    if (
+      !homeState.currentIntentText.trim() ||
+      activeExecutionState === "EVALUATING" ||
+      executableProvidersCount === 0 ||
+      providersLoading
+    ) {
+      return;
+    }
+    runIntentAutomation();
   };
 
   return (
@@ -66,8 +81,14 @@ export const IntentSection: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-900 border border-slate-800 text-[11px] text-slate-400">
-          <Info className="w-3.5 h-3.5 text-blue-400" />
-          <span>Scenarios populate intent &bull; AI engine attaches in Phase 2</span>
+          <Cpu className="w-3.5 h-3.5 text-blue-400" />
+          <span>
+            {providersLoading
+              ? "Verifying engines..."
+              : executableProvidersCount > 0
+              ? `${executableProvidersCount} engine${executableProvidersCount > 1 ? "s" : ""} active \u2022 Provider-neutral dispatch`
+              : "0 engines active \u2022 Configuration required"}
+          </span>
         </div>
       </div>
 
@@ -83,31 +104,52 @@ export const IntentSection: React.FC = () => {
           />
         </div>
 
-        {homeState.currentScenario?.id === "GOING_TO_SLEEP" ||
-        homeState.currentIntentText.toLowerCase().includes("sleep") ? (
-          <button
-            type="button"
-            onClick={() => runJevAutomation()}
-            disabled={jevExecutionState === "EVALUATING"}
-            className="px-5 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-semibold text-xs sm:text-sm flex items-center gap-2 shadow-lg shadow-purple-600/30 transition whitespace-nowrap"
-          >
-            <Sparkles className="w-4 h-4 text-purple-200" />
-            <span>
-              {jevExecutionState === "EVALUATING"
-                ? "Evaluating with Jev..."
-                : "Run Jev Automation"}
-            </span>
-          </button>
-        ) : (
-          <button
-            type="submit"
-            className="px-5 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-medium text-xs sm:text-sm flex items-center gap-2 shadow-lg shadow-blue-600/25 transition whitespace-nowrap"
-          >
-            <Send className="w-4 h-4" />
-            <span>Process Intent</span>
-          </button>
-        )}
+        <button
+          type="submit"
+          disabled={
+            activeExecutionState === "EVALUATING" ||
+            !homeState.currentIntentText.trim() ||
+            executableProvidersCount === 0 ||
+            providersLoading
+          }
+          className="px-5 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium text-xs sm:text-sm flex items-center gap-2 shadow-lg shadow-blue-600/25 transition whitespace-nowrap"
+        >
+          {activeExecutionState === "EVALUATING" ? (
+            <>
+              <Sparkles className="w-4 h-4 animate-spin text-blue-200" />
+              <span>Processing Intent...</span>
+            </>
+          ) : executableProvidersCount === 0 && !providersLoading ? (
+            <>
+              <AlertCircle className="w-4 h-4 text-amber-300" />
+              <span>No Available Engines</span>
+            </>
+          ) : (
+            <>
+              <Send className="w-4 h-4" />
+              <span>Process Intent</span>
+            </>
+          )}
+        </button>
       </form>
+
+      {/* Execution Error Banner */}
+      {executionError && (
+        <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 shrink-0" />
+          <span>{executionError}</span>
+        </div>
+      )}
+
+      {/* No Available Engines Warning */}
+      {executableProvidersCount === 0 && !providersLoading && (
+        <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 shrink-0" />
+          <span>
+            No AI decision engines are currently executable. Enable at least one engine and verify live availability above.
+          </span>
+        </div>
+      )}
 
       {/* Predefined Scenario Buttons */}
       <div className="space-y-2">
@@ -154,13 +196,6 @@ export const IntentSection: React.FC = () => {
           </div>
         </div>
       )}
-
-      {/* Phase Notice Dialog */}
-      <PhaseNoticeModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        intentText={homeState.currentIntentText}
-      />
     </div>
   );
 };

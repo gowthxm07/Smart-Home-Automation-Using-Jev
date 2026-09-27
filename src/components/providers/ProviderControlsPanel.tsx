@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState } from "react";
+import { useHome } from "@/context/HomeContext";
 import {
   Cpu,
   CheckCircle2,
@@ -36,17 +37,18 @@ export interface ProviderStatusItem {
 }
 
 export const ProviderControlsPanel: React.FC = () => {
-  const [providers, setProviders] = useState<ProviderStatusItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    providers,
+    providerEnablement,
+    toggleProvider,
+    fetchProviderStatuses,
+    providersLoading: loading,
+    providersError: error,
+    primaryFloorPlanEngine,
+    setPrimaryFloorPlanEngine,
+  } = useHome();
 
-  // Local enablement state (default all enabled)
-  const [enablement, setEnablement] = useState<Record<string, boolean>>({
-    JEV: true,
-    LAYA: true,
-    LLM: true,
-  });
+  const [refreshing, setRefreshing] = useState(false);
 
   // Modal for runtime TypeSafe API Key
   const [isKeyModalOpen, setIsKeyModalOpen] = useState(false);
@@ -55,39 +57,10 @@ export const ProviderControlsPanel: React.FC = () => {
   const [keySubmitMessage, setKeySubmitMessage] = useState<string | null>(null);
   const [keySubmitError, setKeySubmitError] = useState<string | null>(null);
 
-  const fetchStatuses = useCallback(async () => {
-    try {
-      setError(null);
-      const res = await fetch("/api/providers");
-      if (!res.ok) {
-        throw new Error(`Failed to fetch provider statuses (HTTP ${res.status})`);
-      }
-      const data = await res.json();
-      if (data.success && Array.isArray(data.providers)) {
-        setProviders(data.providers);
-      }
-    } catch (err: unknown) {
-      setError((err as Error)?.message || "Failed to contact provider registry.");
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchStatuses();
-  }, [fetchStatuses]);
-
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
     setRefreshing(true);
-    fetchStatuses();
-  };
-
-  const toggleProvider = (providerId: string) => {
-    setEnablement((prev) => ({
-      ...prev,
-      [providerId]: !prev[providerId],
-    }));
+    await fetchProviderStatuses();
+    setRefreshing(false);
   };
 
   const handleApiKeySubmit = async (e: React.FormEvent) => {
@@ -115,7 +88,7 @@ export const ProviderControlsPanel: React.FC = () => {
       setTimeout(() => {
         setIsKeyModalOpen(false);
         setKeySubmitMessage(null);
-        fetchStatuses();
+        fetchProviderStatuses();
       }, 1500);
     } catch (err: unknown) {
       setKeySubmitError((err as Error)?.message || "Credential configuration failed.");
@@ -202,7 +175,7 @@ export const ProviderControlsPanel: React.FC = () => {
           </div>
         ) : (
           providers.map((p) => {
-            const isEnabled = enablement[p.providerId] ?? true;
+            const isEnabled = providerEnablement[p.providerId] ?? p.enabled;
             const isAvailable = p.availability.status === "AVAILABLE";
             const canRun = isEnabled && isAvailable;
 
