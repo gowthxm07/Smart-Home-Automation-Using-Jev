@@ -1,10 +1,16 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useHome } from "@/context/HomeContext";
 import { Clock, Play, FastForward, RotateCcw, Calendar } from "lucide-react";
 
 export const SimulationClock: React.FC = () => {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const {
     homeState,
     formattedSimulationTime,
@@ -14,6 +20,9 @@ export const SimulationClock: React.FC = () => {
     advanceSimulationTime,
   } = useHome();
 
+  const displayTime = mounted ? formattedSimulationTime : "--:--:--";
+  const displayDate = mounted ? formattedSimulationDate : "---";
+
   return (
     <div className="flex items-center gap-2 bg-slate-900/90 border border-slate-800 rounded-xl px-3 py-1.5 shadow-inner">
       <div className="flex items-center gap-2 border-r border-slate-800 pr-3">
@@ -21,7 +30,7 @@ export const SimulationClock: React.FC = () => {
         <div>
           <div className="flex items-center gap-1.5">
             <span className="font-mono text-xs sm:text-sm font-bold text-white tracking-wide">
-              {formattedSimulationTime}
+              {displayTime}
             </span>
             <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
               {homeState.isSimulatedClock ? `SIM ${homeState.simulationSpeed}x` : "REAL"}
@@ -29,7 +38,7 @@ export const SimulationClock: React.FC = () => {
           </div>
           <span className="text-[10px] text-slate-400 flex items-center gap-1">
             <Calendar className="w-2.5 h-2.5" />
-            {formattedSimulationDate}
+            {displayDate}
           </span>
         </div>
       </div>
