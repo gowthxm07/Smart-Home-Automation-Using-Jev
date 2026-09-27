@@ -88,7 +88,17 @@ async function main() {
   const scenarios = getAllEvaluationScenarios();
   const jevEngine = new JevDecisionEngine();
   const layaEngine = new LayaDecisionEngine();
-  const llmEngine = new LLMDecisionEngine();
+
+  const llmTimeoutMs =
+    typeof process !== "undefined" && process.env.OLLAMA_TIMEOUT_MS
+      ? parseInt(process.env.OLLAMA_TIMEOUT_MS, 10)
+      : isLLMReadiness
+      ? 180000
+      : undefined;
+
+  const llmEngine = new LLMDecisionEngine({
+    timeoutMs: llmTimeoutMs,
+  });
 
   // Pre-Flight Validation
   console.log("--- PART 21: PRE-FLIGHT VALIDATION ---");

@@ -849,63 +849,87 @@ export async function runControlledExperiment(
       "NOT A COMPARATIVE EXPERIMENT: This is an isolated baseline readiness run for the Laya System-1 decision pipeline. It contains zero other provider observations and zero comparative evaluations.";
   }
 
-  const protocol: ExperimentalProtocolConfig = {
-    mode,
-    disclaimer,
-    datasetVersion,
-    datasetScenarioCount: scenarios.length,
-    datasetHash,
-    repetitions,
-    providerIds: activeProviders.map((p) => p.providerId),
-    jevConfiguration:
-      mode === "FULL_COMPARISON" && jevProvider
+    const resolvedLlmTimeoutMs =
+      typeof (llmProvider?.engine as any)?.getTimeoutMs === "function"
+        ? (llmProvider!.engine as any).getTimeoutMs()
+        : typeof (llmProvider?.engine as any)?.getClient?.()?.getTimeoutMs === "function"
+        ? (llmProvider!.engine as any).getClient().getTimeoutMs()
+        : typeof process !== "undefined" && process.env.OLLAMA_TIMEOUT_MS
+        ? parseInt(process.env.OLLAMA_TIMEOUT_MS, 10)
+        : mode === "LLM_ONLY_READINESS"
+        ? 180000
+        : 30000;
+
+    const maxActiveProviderTimeout = Math.max(
+      ...activeProviders.map((p) => {
+        if (p.providerId === "LLM") return resolvedLlmTimeoutMs;
+        if (p.providerId === "LAYA") return 15000;
+        if (p.providerId === "JEV") return 15000;
+        return 15000;
+      })
+    );
+    const resolvedPerScenarioTimeoutMs = Math.max(45000, maxActiveProviderTimeout + 30000);
+
+    const protocol: ExperimentalProtocolConfig = {
+      mode,
+      disclaimer,
+      datasetVersion,
+      datasetScenarioCount: scenarios.length,
+      datasetHash,
+      repetitions,
+      providerIds: activeProviders.map((p) => p.providerId),
+      jevConfiguration:
+        mode === "FULL_COMPARISON" && jevProvider
+          ? {
+              engineId: jevProvider.engine.id || "jev-system-one",
+              engineName: jevProvider.engine.name || "TypeSafe Jev",
+              defaultModel: "jev-latest",
+              baseUrl: process.env.TYPESAFE_BASE_URL || "https://api.typesafe.ai",
+              timeoutMs: 15000,
+            }
+          : undefined,
+      layaConfiguration: layaProvider
         ? {
-            engineId: jevProvider.engine.id || "jev-system-one",
-            engineName: jevProvider.engine.name || "TypeSafe Jev",
-            defaultModel: "jev-latest",
-            baseUrl: process.env.TYPESAFE_BASE_URL || "https://api.typesafe.ai",
+            engineId: layaProvider.engine.id || "laya-system-one",
+            engineName: layaProvider.engine.name || "Laya (System-1 Decision Model)",
+            model:
+              typeof (layaProvider.engine as any)?.getClient === "function"
+                ? (layaProvider.engine as any).getClient().getModel()
+                : "convaiinnovations/laya-modernbert-large",
+            baseUrl:
+              typeof (layaProvider.engine as any)?.getClient === "function"
+                ? (layaProvider.engine as any).getClient().getBaseUrl()
+                : "http://127.0.0.1:8081",
             timeoutMs: 15000,
           }
         : undefined,
-    layaConfiguration: layaProvider
-      ? {
-          engineId: layaProvider.engine.id || "laya-system-one",
-          engineName: layaProvider.engine.name || "Laya (System-1 Decision Model)",
-          model:
-            typeof (layaProvider.engine as any)?.getClient === "function"
-              ? (layaProvider.engine as any).getClient().getModel()
-              : "convaiinnovations/laya-modernbert-large",
-          baseUrl:
-            typeof (layaProvider.engine as any)?.getClient === "function"
-              ? (layaProvider.engine as any).getClient().getBaseUrl()
-              : "http://127.0.0.1:8081",
-          timeoutMs: 15000,
-        }
-      : undefined,
-    llmConfiguration: llmProvider
-      ? {
-          engineId: llmProvider.engine.id || "llm-ollama",
-          engineName: llmProvider.engine.name || "Conventional LLM (Local Ollama)",
-          model:
-            typeof (llmProvider.engine as any)?.getModel === "function"
-              ? (llmProvider.engine as any).getModel()
-              : "llama3.2:3b",
-          baseUrl: process.env.OLLAMA_BASE_URL || "http://127.0.0.1:11434",
-          timeoutMs: 30000,
-          promptVersion: HOMEMIND_LLM_PROMPT_VERSION,
-          temperature: 0.0,
-        }
-      : undefined,
-    timeoutConfiguration: {
-      jevTimeoutMs: 15000,
-      layaTimeoutMs: 15000,
-      llmTimeoutMs: 30000,
-      perScenarioTimeoutMs: 45000,
-    },
-    executionOrder: `DETERMINISTIC_SEQUENTIAL_BY_SCENARIO (${activeProviders.map((p) => `${p.providerId} 1..${repetitions}`).join(", ")})`,
-    gitCommitHash,
-    startedAt,
-  };
+      llmConfiguration: llmProvider
+        ? {
+            engineId: llmProvider.engine.id || "llm-ollama",
+            engineName: llmProvider.engine.name || "Conventional LLM (Local Ollama)",
+            model:
+              typeof (llmProvider.engine as any)?.getModel === "function"
+                ? (llmProvider.engine as any).getModel()
+                : "llama3.2:3b",
+            baseUrl:
+              typeof (llmProvider.engine as any)?.getClient === "function"
+                ? (llmProvider.engine as any).getClient().getBaseUrl()
+                : process.env.OLLAMA_BASE_URL || "http://127.0.0.1:11434",
+            timeoutMs: resolvedLlmTimeoutMs,
+            promptVersion: HOMEMIND_LLM_PROMPT_VERSION,
+            temperature: 0.0,
+          }
+        : undefined,
+      timeoutConfiguration: {
+        jevTimeoutMs: 15000,
+        layaTimeoutMs: 15000,
+        llmTimeoutMs: resolvedLlmTimeoutMs,
+        perScenarioTimeoutMs: resolvedPerScenarioTimeoutMs,
+      },
+      executionOrder: `DETERMINISTIC_SEQUENTIAL_BY_SCENARIO (${activeProviders.map((p) => `${p.providerId} 1..${repetitions}`).join(", ")})`,
+      gitCommitHash,
+      startedAt,
+    };
 
   // Hardened Incremental Persistence Setup (Milestone 3.10A)
   const expDir =

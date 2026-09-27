@@ -35,7 +35,11 @@ export class OllamaClient {
     }
 
     this.baseUrl = rawUrl.trim().replace(/\/+$/, "");
-    this.timeoutMs = config.timeoutMs ?? DEFAULT_OLLAMA_TIMEOUT_MS;
+    this.timeoutMs =
+      config.timeoutMs ??
+      (typeof process !== "undefined" && process.env.OLLAMA_TIMEOUT_MS
+        ? parseInt(process.env.OLLAMA_TIMEOUT_MS, 10)
+        : DEFAULT_OLLAMA_TIMEOUT_MS);
     this.fetchFn =
       config.fetchFn || (typeof fetch !== "undefined" ? fetch : (globalThis.fetch as typeof fetch));
   }

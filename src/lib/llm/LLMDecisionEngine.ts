@@ -71,6 +71,13 @@ export class LLMDecisionEngine implements DecisionEngine {
   }
 
   /**
+   * Returns the configured Ollama client timeout in milliseconds.
+   */
+  getTimeoutMs(): number {
+    return this.client.getTimeoutMs();
+  }
+
+  /**
    * Verifies connectivity with local Ollama runtime and checks model availability.
    */
   async checkHealth(): Promise<{ healthy: boolean; modelCount: number; modelAvailable: boolean; error?: string }> {
