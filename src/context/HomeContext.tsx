@@ -12,6 +12,10 @@ import { DecisionResult } from "@/types/engine";
 import { ProviderRuntimeStatus } from "@/lib/providers";
 import { DualConfigurationResult } from "@/lib/evaluation/comparison/dualConfigRunner";
 import { EvaluationScenario } from "@/lib/evaluation/types";
+import {
+  mapPresetToBenchmarkScenarioId,
+  getBenchmarkScenarioForPreset,
+} from "@/lib/evaluation/comparison/scenarioMapping";
 
 interface HomeContextValue {
   homeState: HomeState;
@@ -231,7 +235,12 @@ export function HomeProvider({ children }: { children: React.ReactNode }) {
           body: JSON.stringify({
             prompt: targetIntent,
             homeState: initialSnapshot,
-            scenarioId: scenario?.id || homeState.currentScenario?.id,
+            scenarioId:
+              scenario?.id ||
+              homeState.currentScenario?.benchmarkScenarioId ||
+              (homeState.currentScenario?.id
+                ? mapPresetToBenchmarkScenarioId(homeState.currentScenario.id)
+                : undefined),
             selectedMultiEngineDriver: multiEngineDriver,
           }),
         });
@@ -357,17 +366,40 @@ export function HomeProvider({ children }: { children: React.ReactNode }) {
 
   // Intent & Scenario methods
   const selectScenario = useCallback((scenario: ScenarioPreset) => {
-    setHomeState((prev) => ({
-      ...prev,
-      currentScenario: scenario,
-      currentIntentText: scenario.intent,
-    }));
+    const benchmarkScenarioId =
+      scenario.benchmarkScenarioId || mapPresetToBenchmarkScenarioId(scenario.id);
+    const benchmarkScenario = benchmarkScenarioId
+      ? getBenchmarkScenarioForPreset(scenario.id)
+      : undefined;
+
+    setHomeState((prev) => {
+      const initialDevices = benchmarkScenario
+        ? JSON.parse(JSON.stringify(benchmarkScenario.initialState.devices))
+        : prev.devices;
+
+      return {
+        ...prev,
+        devices: initialDevices,
+        currentScenario: scenario,
+        currentIntentText: scenario.intent,
+      };
+    });
+
+    if (benchmarkScenario) {
+      const clonedState = JSON.parse(JSON.stringify(benchmarkScenario.initialState));
+      setMultiEngineHomeState(clonedState);
+      setLlmOnlyHomeState(JSON.parse(JSON.stringify(clonedState)));
+    }
   }, []);
 
   const setIntentText = useCallback((text: string) => {
     setHomeState((prev) => ({
       ...prev,
       currentIntentText: text,
+      currentScenario:
+        prev.currentScenario && prev.currentScenario.intent === text
+          ? prev.currentScenario
+          : null,
     }));
   }, []);
 

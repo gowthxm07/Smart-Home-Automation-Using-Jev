@@ -187,9 +187,16 @@ export const IntentSection: React.FC = () => {
             {getScenarioIcon(homeState.currentScenario.suggestedIcon)}
           </div>
           <div className="space-y-0.5">
-            <span className="text-xs font-semibold text-purple-200">
-              Active Context: {homeState.currentScenario.name}
-            </span>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-semibold text-purple-200">
+                Active Context: {homeState.currentScenario.name}
+              </span>
+              {homeState.currentScenario.benchmarkScenarioId && (
+                <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                  Controlled Scenario: {homeState.currentScenario.benchmarkScenarioId}
+                </span>
+              )}
+            </div>
             <p className="text-[11px] text-slate-400 leading-relaxed">
               {homeState.currentScenario.description}
             </p>

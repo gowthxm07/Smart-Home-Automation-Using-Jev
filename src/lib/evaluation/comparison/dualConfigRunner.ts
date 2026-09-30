@@ -239,10 +239,11 @@ export async function runDualConfiguration(
   const evalEngine = options.evaluationEngine || new StandardEvaluationEngine();
   const simEngine = options.simEngine || simulationEngine;
 
-  // 1. Create three completely independent deep clones of initialHomeState
-  const cloneA: HomeState = JSON.parse(JSON.stringify(initialHomeState));
-  const cloneB: HomeState = JSON.parse(JSON.stringify(initialHomeState));
-  const cloneC: HomeState = JSON.parse(JSON.stringify(initialHomeState));
+  // 1. Create three completely independent deep clones of initialHomeState (or scenario.initialState)
+  const baseInitialState = scenario ? scenario.initialState : initialHomeState;
+  const cloneA: HomeState = JSON.parse(JSON.stringify(baseInitialState));
+  const cloneB: HomeState = JSON.parse(JSON.stringify(baseInitialState));
+  const cloneC: HomeState = JSON.parse(JSON.stringify(baseInitialState));
 
   // 2. Execute all three runs concurrently with strict fault isolation
   const [layaRunA, llmRunA, llmRunB] = await Promise.all([

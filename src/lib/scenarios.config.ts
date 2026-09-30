@@ -13,6 +13,7 @@ export const PREDEFINED_SCENARIOS: ScenarioPreset[] = [
     description:
       "Nighttime resting context. Prepares bedroom lighting, climate, locks doors, and powers down unnecessary loads.",
     suggestedIcon: "Moon",
+    benchmarkScenarioId: "normal-sleep-01",
   },
   {
     id: "LEAVING_HOME",
@@ -21,6 +22,7 @@ export const PREDEFINED_SCENARIOS: ScenarioPreset[] = [
     description:
       "Vacating home context. Arms security, locks access points, shuts off non-essential lighting and power plugs.",
     suggestedIcon: "LogOut",
+    benchmarkScenarioId: "normal-leave-01",
   },
   {
     id: "MOVIE_NIGHT",
@@ -29,6 +31,7 @@ export const PREDEFINED_SCENARIOS: ScenarioPreset[] = [
     description:
       "Entertainment context. Sets ambient mood lighting in living room, closes curtains, and powers on TV system.",
     suggestedIcon: "Film",
+    benchmarkScenarioId: "normal-movie-01",
   },
   {
     id: "WORKING",
@@ -37,6 +40,7 @@ export const PREDEFINED_SCENARIOS: ScenarioPreset[] = [
     description:
       "Productivity context. Focuses study illumination, turns on laptop charging station, adjusts temperature.",
     suggestedIcon: "Briefcase",
+    benchmarkScenarioId: "normal-work-01",
   },
   {
     id: "COMING_HOME",
@@ -45,6 +49,7 @@ export const PREDEFINED_SCENARIOS: ScenarioPreset[] = [
     description:
       "Arrival context. Disarms security, unlocks main entry, illuminates foyer, and sets pleasant climate.",
     suggestedIcon: "Home",
+    benchmarkScenarioId: "normal-arrive-01",
   },
   {
     id: "RELAXING",
@@ -53,6 +58,7 @@ export const PREDEFINED_SCENARIOS: ScenarioPreset[] = [
     description:
       "Comfort lounge context. Dims living spaces, activates gentle fan ventilation, soft music or display backdrop.",
     suggestedIcon: "Coffee",
+    benchmarkScenarioId: "multi-relax-01",
   },
   {
     id: "WAKING_UP",
@@ -61,5 +67,6 @@ export const PREDEFINED_SCENARIOS: ScenarioPreset[] = [
     description:
       "Morning wake-up context. Opens bedroom curtains to daylight, deactivates night lamp, activates kitchen power.",
     suggestedIcon: "Sun",
+    benchmarkScenarioId: "normal-wake-01",
   },
 ];

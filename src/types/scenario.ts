@@ -20,4 +20,5 @@ export interface ScenarioPreset {
   intent: string;
   description: string;
   suggestedIcon: string;
+  benchmarkScenarioId?: string;
 }
