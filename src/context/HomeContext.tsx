@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from "react";
 import { HomeState, AutomationMode } from "@/types/home";
-import { Action, ActionSource, ActionType } from "@/types/action";
+import { Action, ActionLogEntry, ActionSource, ActionType } from "@/types/action";
 import { Device, DeviceState } from "@/types/device";
 import { ScenarioPreset } from "@/types/scenario";
 import { INITIAL_DEVICES } from "@/lib/devices.config";
@@ -10,6 +10,8 @@ import { INITIAL_ROOMS } from "@/lib/rooms.config";
 import { simulationEngine } from "@/lib/simulationEngine";
 import { DecisionResult } from "@/types/engine";
 import { ProviderRuntimeStatus } from "@/lib/providers";
+import { DualConfigurationResult } from "@/lib/evaluation/comparison/dualConfigRunner";
+import { EvaluationScenario } from "@/lib/evaluation/types";
 
 interface HomeContextValue {
   homeState: HomeState;
@@ -72,6 +74,17 @@ interface HomeContextValue {
   clearExecutionTrace: () => void;
   providersLoading: boolean;
   providersError: string | null;
+
+  // Milestone 3.14: Dual-Configuration Dashboard
+  dualConfigurationResult: DualConfigurationResult | null;
+  multiEngineHomeState: HomeState;
+  llmOnlyHomeState: HomeState;
+  multiEngineDriver: "LAYA" | "LLM";
+  setMultiEngineDriver: (driver: "LAYA" | "LLM") => void;
+  runDualConfigurationAutomation: (
+    intentText?: string,
+    scenario?: EvaluationScenario
+  ) => Promise<boolean>;
 }
 
 const HomeContext = createContext<HomeContextValue | undefined>(undefined);
@@ -111,6 +124,24 @@ export function HomeProvider({ children }: { children: React.ReactNode }) {
     { success: boolean; decisionResult?: DecisionResult; error?: string }
   > | null>(null);
   const [primaryFloorPlanEngine, setPrimaryFloorPlanEngine] = useState<string | null>(null);
+
+  // Milestone 3.14: Dual-Configuration State
+  const [dualConfigurationResult, setDualConfigurationResult] = useState<DualConfigurationResult | null>(null);
+  const [multiEngineDriver, setMultiEngineDriverState] = useState<"LAYA" | "LLM">("LAYA");
+  const [multiEngineHomeState, setMultiEngineHomeState] = useState<HomeState>(() => JSON.parse(JSON.stringify(homeState)));
+  const [llmOnlyHomeState, setLlmOnlyHomeState] = useState<HomeState>(() => JSON.parse(JSON.stringify(homeState)));
+
+  const setMultiEngineDriver = useCallback((driver: "LAYA" | "LLM") => {
+    setMultiEngineDriverState(driver);
+    setPrimaryFloorPlanEngine(driver);
+    if (dualConfigurationResult) {
+      const selectedRun = driver === "LAYA"
+        ? dualConfigurationResult.configurationA.layaRun
+        : dualConfigurationResult.configurationA.llmRun;
+      setMultiEngineHomeState(selectedRun.finalState);
+      setHomeState(selectedRun.finalState);
+    }
+  }, [dualConfigurationResult]);
 
   const fetchProviderStatuses = useCallback(async () => {
     try {
@@ -171,8 +202,8 @@ export function HomeProvider({ children }: { children: React.ReactNode }) {
     setExecutionError(null);
   }, []);
 
-  const runIntentAutomation = useCallback(
-    async (intentText?: string): Promise<boolean> => {
+  const runDualConfigurationAutomation = useCallback(
+    async (intentText?: string, scenario?: EvaluationScenario): Promise<boolean> => {
       const targetIntent = (intentText || homeState.currentIntentText || "").trim();
 
       if (!targetIntent) {
@@ -190,64 +221,68 @@ export function HomeProvider({ children }: { children: React.ReactNode }) {
       setActiveExecutionState("EVALUATING");
       setExecutionError(null);
 
+      // Capture initial state BEFORE any provider execution
+      const initialSnapshot: HomeState = JSON.parse(JSON.stringify(homeState));
+
       try {
-        const res = await fetch("/api/providers", {
+        const res = await fetch("/api/dual-config", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            intent: targetIntent,
-            homeState,
-            enabledProviders: providerEnablement,
+            prompt: targetIntent,
+            homeState: initialSnapshot,
+            scenarioId: scenario?.id || homeState.currentScenario?.id,
+            selectedMultiEngineDriver: multiEngineDriver,
           }),
         });
 
         const data = await res.json();
         if (!res.ok || !data.success) {
-          throw new Error(data.error || `HTTP ${res.status}: Multi-engine evaluation failed.`);
+          throw new Error(data.error || `HTTP ${res.status}: Dual-configuration evaluation failed.`);
         }
 
-        const results = (data.results || {}) as Record<
-          string,
-          { success: boolean; decisionResult?: DecisionResult; error?: string }
-        >;
+        const result: DualConfigurationResult = data.result;
+        setDualConfigurationResult(result);
 
-        setLatestMultiEngineResults(results);
+        // Update Multi-Engine State based on selected driver
+        const selectedRun =
+          multiEngineDriver === "LAYA"
+            ? result.configurationA.layaRun
+            : result.configurationA.llmRun;
 
+        setMultiEngineHomeState(selectedRun.finalState);
+        setLlmOnlyHomeState(result.configurationB.llmRun.finalState);
 
-        // Apply actions to Virtual Home Floor Plan
-        // Safe multi-provider policy:
-        // - Single provider: its actions apply directly.
-        // - Multiple providers: designated primary engine applies (or first successful provider).
-        // - ZERO ranking or winner evaluation.
-        const executedProviders: string[] = data.executedProviders || [];
-        const successfulProviders = executedProviders.filter(
-          (p) => results[p]?.success && results[p]?.decisionResult
-        );
+        // Update homeState with the selected driver's final state and merge action history
+        setHomeState((prev) => {
+          const newEntries: ActionLogEntry[] = [
+            ...selectedRun.finalState.actionHistory,
+            ...result.configurationB.llmRun.finalState.actionHistory.filter(
+              (e) => !selectedRun.finalState.actionHistory.some((se) => se.id === e.id)
+            ),
+          ];
+          return {
+            ...selectedRun.finalState,
+            actionHistory: newEntries.slice(0, 100),
+          };
+        });
 
-        if (successfulProviders.length === 0) {
-          throw new Error("All executed AI engines returned execution errors.");
-        }
+        setLatestAppliedActions(selectedRun.executedActions);
+        setLatestSkippedActions(selectedRun.skippedRedundantActions);
 
-        let chosenEngineId = successfulProviders[0];
-        if (primaryFloorPlanEngine && successfulProviders.includes(primaryFloorPlanEngine)) {
-          chosenEngineId = primaryFloorPlanEngine;
-        }
-
-        const chosenDecision = results[chosenEngineId]?.decisionResult;
-        if (chosenDecision) {
-          const actions = chosenDecision.actions || [];
-          setLatestAppliedActions(actions);
-          setLatestSkippedActions(
-            (chosenDecision.metadata?.skippedRedundantActions as string[]) || []
-          );
-
-          if (actions.length > 0) {
-            setHomeState((prev) => {
-              const { finalState } = simulationEngine.applyBatchActions(actions, prev);
-              return finalState;
-            });
-          }
-        }
+        // Populate latestMultiEngineResults for trace panels
+        setLatestMultiEngineResults({
+          LAYA: {
+            success: result.configurationA.layaRun.status === "SUCCESS",
+            decisionResult: result.configurationA.layaRun.decisionResult,
+            error: result.configurationA.layaRun.error,
+          },
+          LLM: {
+            success: result.configurationA.llmRun.status === "SUCCESS",
+            decisionResult: result.configurationA.llmRun.decisionResult,
+            error: result.configurationA.llmRun.error,
+          },
+        });
 
         setActiveExecutionState("COMPLETED");
         return true;
@@ -258,7 +293,14 @@ export function HomeProvider({ children }: { children: React.ReactNode }) {
         return false;
       }
     },
-    [homeState, executableProvidersCount, providerEnablement, primaryFloorPlanEngine]
+    [homeState, executableProvidersCount, multiEngineDriver]
+  );
+
+  const runIntentAutomation = useCallback(
+    async (intentText?: string) => {
+      return runDualConfigurationAutomation(intentText);
+    },
+    [runDualConfigurationAutomation]
   );
 
   // Simulation clock ticker
@@ -535,7 +577,7 @@ export function HomeProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const resetSimulationState = useCallback(() => {
-    setHomeState({
+    const freshState: HomeState = {
       simulationTime: new Date().toISOString(),
       isSimulatedClock: true,
       simulationSpeed: 1,
@@ -546,7 +588,16 @@ export function HomeProvider({ children }: { children: React.ReactNode }) {
       currentIntentText: "",
       lastAction: null,
       actionHistory: [],
-    });
+    };
+    setHomeState(freshState);
+    setMultiEngineHomeState(JSON.parse(JSON.stringify(freshState)));
+    setLlmOnlyHomeState(JSON.parse(JSON.stringify(freshState)));
+    setDualConfigurationResult(null);
+    setLatestAppliedActions([]);
+    setLatestSkippedActions([]);
+    setLatestMultiEngineResults(null);
+    setActiveExecutionState("IDLE");
+    setExecutionError(null);
   }, []);
 
   // Time formatters
@@ -638,6 +689,13 @@ export function HomeProvider({ children }: { children: React.ReactNode }) {
     clearExecutionTrace,
     providersLoading,
     providersError,
+    // Milestone 3.14: Dual-Configuration Dashboard
+    dualConfigurationResult,
+    multiEngineHomeState,
+    llmOnlyHomeState,
+    multiEngineDriver,
+    setMultiEngineDriver,
+    runDualConfigurationAutomation,
   };
 
   return <HomeContext.Provider value={value}>{children}</HomeContext.Provider>;

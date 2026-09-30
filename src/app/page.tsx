@@ -5,11 +5,11 @@ import { HomeProvider } from "@/context/HomeContext";
 import { Header } from "@/components/layout/Header";
 import { IntentSection } from "@/components/intent/IntentSection";
 import { ProviderControlsPanel } from "@/components/providers/ProviderControlsPanel";
-import { VirtualFloorPlan } from "@/components/home/VirtualFloorPlan";
-import { ManualOverridePanel } from "@/components/controls/ManualOverridePanel";
-import { MultiEngineTracePanel } from "@/components/trace/MultiEngineTracePanel";
+import { DualFloorPlanSection } from "@/components/home/DualFloorPlanSection";
+import { DualConfigurationTracePanel } from "@/components/trace/DualConfigurationTracePanel";
 import { ActionHistoryPanel } from "@/components/history/ActionHistoryPanel";
-import { AlertCircle, ShieldAlert, Cpu, CheckCircle } from "lucide-react";
+import { ManualOverridePanel } from "@/components/controls/ManualOverridePanel";
+import { AlertCircle, Cpu, CheckCircle } from "lucide-react";
 
 export default function HomeMindDashboard() {
   return (
@@ -28,37 +28,37 @@ export default function HomeMindDashboard() {
               </div>
               <div>
                 <span className="font-semibold text-blue-300">
-                  Software-Only Simulation Environment:
+                  Dual-Configuration Comparative Dashboard:
                 </span>{" "}
                 <span className="text-slate-300">
-                  No physical hardware, ESP32, relays, or Arduino boards connected. All 18 smart devices and 5 room contexts operate purely in software.
+                  Same prompt, independently executed configurations. Configuration A (Multi-Engine: Laya + LLM) and Configuration B (LLM-Only Standalone Baseline) execute on independent HomeState clones with zero cross-engine leakage.
                 </span>
               </div>
             </div>
             <div className="flex items-center gap-2 shrink-0">
               <span className="px-2.5 py-1 rounded-full bg-cyan-500/10 font-mono text-[10px] text-cyan-300 border border-cyan-500/30 font-semibold">
-                Dual-Engine Platform (Laya • LLM)
+                Dual-Configuration Platform
               </span>
             </div>
           </div>
 
-          {/* Section 1: AI Decision Engines & Provider Controls */}
-          <ProviderControlsPanel />
-
-          {/* Section 2: User Intent & Scenarios */}
+          {/* 1. Intent / Prompt */}
           <IntentSection />
 
-          {/* Section 3: AI Decision Traces & Multi-Engine Observability */}
-          <MultiEngineTracePanel />
+          {/* 2. Execution Controls */}
+          <ProviderControlsPanel />
 
-          {/* Section 4: Manual Device Overrides */}
-          <ManualOverridePanel />
+          {/* 3. Dual Floor Plans */}
+          <DualFloorPlanSection />
 
-          {/* Section 5: Virtual Smart Home Floor Plan & Device Grid */}
-          <VirtualFloorPlan />
+          {/* 4. Comparative Execution Traces & Metrics */}
+          <DualConfigurationTracePanel />
 
-          {/* Section 6: Live Action Audit Log */}
+          {/* 5. Action History */}
           <ActionHistoryPanel />
+
+          {/* 6. Manual Device Overrides */}
+          <ManualOverridePanel />
         </main>
 
         {/* Engineering Footer */}

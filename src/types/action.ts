@@ -22,6 +22,8 @@ export type ActionType =
   | "CLOSE_CURTAIN"
   | "SET_CURTAIN_POSITION";
 
+export type ConfigurationId = "MULTI_ENGINE" | "LLM_ONLY";
+
 export interface Action {
   id: string;
   deviceId: string;
@@ -29,6 +31,7 @@ export interface Action {
   value?: unknown;
   source: ActionSource;
   timestamp: string; // ISO string
+  configurationId?: ConfigurationId;
 }
 
 export interface ActionLogEntry {
@@ -42,4 +45,5 @@ export interface ActionLogEntry {
   newState: unknown;
   source: ActionSource;
   summary: string;
+  configurationId?: ConfigurationId;
 }

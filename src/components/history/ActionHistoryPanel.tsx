@@ -5,17 +5,49 @@ import { useHome } from "@/context/HomeContext";
 import { History, Trash2, Filter, User, Cpu, Terminal } from "lucide-react";
 import { ActionSource } from "@/types/action";
 
+export type HistoryFilter = ActionSource | "ALL" | "MULTI-ENGINE" | "LLM-ONLY";
+
 export const ActionHistoryPanel: React.FC = () => {
   const { homeState, clearActionHistory } = useHome();
-  const [sourceFilter, setSourceFilter] = useState<ActionSource | "ALL">("ALL");
+  const [sourceFilter, setSourceFilter] = useState<HistoryFilter>("ALL");
 
   const filteredHistory =
     sourceFilter === "ALL"
       ? homeState.actionHistory
+      : sourceFilter === "MULTI-ENGINE"
+      ? homeState.actionHistory.filter((entry) => entry.configurationId === "MULTI_ENGINE")
+      : sourceFilter === "LLM-ONLY"
+      ? homeState.actionHistory.filter((entry) => entry.configurationId === "LLM_ONLY")
       : homeState.actionHistory.filter((entry) => entry.source === sourceFilter);
 
-  const getSourceBadge = (source: ActionSource) => {
-    switch (source) {
+  const getSourceBadge = (entry: { source: ActionSource; configurationId?: string }) => {
+    if (entry.configurationId === "MULTI_ENGINE") {
+      if (entry.source === "LAYA") {
+        return (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-medium bg-teal-500/15 text-teal-300 border border-teal-500/30">
+            <Cpu className="w-3 h-3 text-teal-400" />
+            MULTI-ENGINE / LAYA
+          </span>
+        );
+      }
+      return (
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-medium bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
+          <Cpu className="w-3 h-3 text-cyan-400" />
+          MULTI-ENGINE / LLM
+        </span>
+      );
+    }
+
+    if (entry.configurationId === "LLM_ONLY") {
+      return (
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-medium bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+          <Cpu className="w-3 h-3 text-emerald-400" />
+          LLM-ONLY / LLM
+        </span>
+      );
+    }
+
+    switch (entry.source) {
       case "MANUAL":
         return (
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-medium bg-blue-500/10 text-blue-400 border border-blue-500/25">
@@ -87,7 +119,7 @@ export const ActionHistoryPanel: React.FC = () => {
           {/* Filter */}
           <div className="flex items-center gap-1 bg-slate-900/80 p-1 rounded-lg border border-slate-800 text-xs">
             <Filter className="w-3.5 h-3.5 text-slate-400 ml-1" />
-            {(["ALL", "MANUAL", "LAYA", "LLM", "SYSTEM"] as const).map((s) => (
+            {(["ALL", "MULTI-ENGINE", "LLM-ONLY", "LAYA", "LLM", "MANUAL", "SYSTEM"] as const).map((s) => (
               <button
                 key={s}
                 onClick={() => setSourceFilter(s)}
@@ -145,7 +177,7 @@ export const ActionHistoryPanel: React.FC = () => {
 
               <div className="flex items-center justify-between sm:justify-end gap-3 pl-8 sm:pl-0">
                 <span className="text-xs font-mono text-cyan-300 font-medium">{entry.summary}</span>
-                {getSourceBadge(entry.source)}
+                {getSourceBadge(entry)}
               </div>
             </div>
           ))

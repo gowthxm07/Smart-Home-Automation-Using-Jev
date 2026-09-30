@@ -73,9 +73,9 @@ export const IntentSection: React.FC = () => {
             <Sparkles className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="text-base font-semibold text-slate-100">User Intent & Automation Scenarios</h2>
+            <h2 className="text-base font-semibold text-slate-100">User Intent & Comparative Automation</h2>
             <p className="text-xs text-slate-400">
-              Select a predefined scenario or input custom natural-language context
+              Evaluates across Configuration A (Multi-Engine) and Configuration B (LLM-Only) on independent state clones
             </p>
           </div>
         </div>
@@ -117,7 +117,7 @@ export const IntentSection: React.FC = () => {
           {activeExecutionState === "EVALUATING" ? (
             <>
               <Sparkles className="w-4 h-4 animate-spin text-blue-200" />
-              <span>Processing Intent...</span>
+              <span>Evaluating Dual Configurations...</span>
             </>
           ) : executableProvidersCount === 0 && !providersLoading ? (
             <>

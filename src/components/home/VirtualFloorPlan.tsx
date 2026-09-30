@@ -4,10 +4,26 @@ import React, { useState } from "react";
 import { useHome } from "@/context/HomeContext";
 import { RoomId } from "@/types/device";
 import { DeviceCard } from "@/components/devices/DeviceCard";
+import { HomeState } from "@/types/home";
 import { Home, Bed, Utensils, DoorOpen, Briefcase, LayoutGrid } from "lucide-react";
 
-export const VirtualFloorPlan: React.FC = () => {
-  const { homeState } = useHome();
+export interface VirtualFloorPlanProps {
+  homeState?: HomeState;
+  title?: string;
+  subtitle?: string;
+  badge?: React.ReactNode;
+  headerControls?: React.ReactNode;
+}
+
+export const VirtualFloorPlan: React.FC<VirtualFloorPlanProps> = ({
+  homeState: propHomeState,
+  title = "Virtual Smart Home Environment",
+  subtitle = "5 Simulated Zones • 18 Virtual Multi-Attribute Devices",
+  badge,
+  headerControls,
+}) => {
+  const { homeState: contextHomeState } = useHome();
+  const effectiveHomeState = propHomeState || contextHomeState;
   const [selectedRoom, setSelectedRoom] = useState<RoomId | "ALL">("ALL");
 
   const getRoomIcon = (roomId: RoomId) => {
@@ -25,7 +41,7 @@ export const VirtualFloorPlan: React.FC = () => {
     }
   };
 
-  const devicesList = Object.values(homeState.devices);
+  const devicesList = Object.values(effectiveHomeState.devices);
 
   const filteredDevices =
     selectedRoom === "ALL"
@@ -39,12 +55,15 @@ export const VirtualFloorPlan: React.FC = () => {
         <div>
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse-subtle"></span>
-            <h2 className="text-base font-semibold text-slate-100">Virtual Smart Home Environment</h2>
+            <h2 className="text-base font-semibold text-slate-100">{title}</h2>
+            {badge}
           </div>
-          <p className="text-xs text-slate-400 mt-0.5">
-            5 Simulated Zones &bull; 18 Virtual Multi-Attribute Devices
-          </p>
+          <p className="text-xs text-slate-400 mt-0.5">{subtitle}</p>
         </div>
+
+        {headerControls && (
+          <div className="flex items-center gap-2">{headerControls}</div>
+        )}
 
         {/* Room Filter Pills */}
         <div className="flex items-center gap-1.5 overflow-x-auto max-w-full pb-1 sm:pb-0">
@@ -60,7 +79,7 @@ export const VirtualFloorPlan: React.FC = () => {
             All Rooms ({devicesList.length})
           </button>
 
-          {homeState.rooms.map((room) => {
+          {effectiveHomeState.rooms.map((room) => {
             const count = devicesList.filter((d) => d.roomId === room.id).length;
             const isSelected = selectedRoom === room.id;
             return (
@@ -83,7 +102,7 @@ export const VirtualFloorPlan: React.FC = () => {
 
       {/* Room Summary Cards Bar */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-        {homeState.rooms.map((room) => {
+        {effectiveHomeState.rooms.map((room) => {
           const roomDevices = devicesList.filter((d) => d.roomId === room.id);
           const activeInRoom = roomDevices.filter((d) => {
             if ("power" in d.state) return d.state.power === "ON";
