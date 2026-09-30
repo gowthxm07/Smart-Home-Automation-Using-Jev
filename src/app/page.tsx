@@ -7,7 +7,7 @@ import { IntentSection } from "@/components/intent/IntentSection";
 import { ProviderControlsPanel } from "@/components/providers/ProviderControlsPanel";
 import { VirtualFloorPlan } from "@/components/home/VirtualFloorPlan";
 import { ManualOverridePanel } from "@/components/controls/ManualOverridePanel";
-import { JevDecisionTracePanel } from "@/components/jev/JevDecisionTracePanel";
+import { MultiEngineTracePanel } from "@/components/trace/MultiEngineTracePanel";
 import { ActionHistoryPanel } from "@/components/history/ActionHistoryPanel";
 import { AlertCircle, ShieldAlert, Cpu, CheckCircle } from "lucide-react";
 
@@ -36,8 +36,8 @@ export default function HomeMindDashboard() {
               </div>
             </div>
             <div className="flex items-center gap-2 shrink-0">
-              <span className="px-2.5 py-1 rounded-full bg-purple-500/10 font-mono text-[10px] text-purple-300 border border-purple-500/30 font-semibold">
-                Multi-Engine Platform (Jev • Laya • LLM)
+              <span className="px-2.5 py-1 rounded-full bg-cyan-500/10 font-mono text-[10px] text-cyan-300 border border-cyan-500/30 font-semibold">
+                Dual-Engine Platform (Laya • LLM)
               </span>
             </div>
           </div>
@@ -48,16 +48,16 @@ export default function HomeMindDashboard() {
           {/* Section 2: User Intent & Scenarios */}
           <IntentSection />
 
-          {/* Section 3: Jev Decision Trace & Observability (Milestone 2.3) */}
-          <JevDecisionTracePanel />
+          {/* Section 3: AI Decision Traces & Multi-Engine Observability */}
+          <MultiEngineTracePanel />
 
-          {/* Section 3: Manual Device Overrides */}
+          {/* Section 4: Manual Device Overrides */}
           <ManualOverridePanel />
 
-          {/* Section 4: Virtual Smart Home Floor Plan & Device Grid */}
+          {/* Section 5: Virtual Smart Home Floor Plan & Device Grid */}
           <VirtualFloorPlan />
 
-          {/* Section 4: Live Action Audit Log */}
+          {/* Section 6: Live Action Audit Log */}
           <ActionHistoryPanel />
         </main>
 
@@ -70,12 +70,12 @@ export default function HomeMindDashboard() {
               <span>Context-Aware Multi-Device Smart Home Automation</span>
             </div>
             <div className="flex items-center gap-4 text-slate-500 font-mono text-[11px]">
-              <span>Phase 1: Simulation Foundation</span>
+              <span>Multi-Engine Simulation Platform</span>
               <span>&bull;</span>
               <span>100% Software Simulated</span>
               <span>&bull;</span>
               <span className="text-emerald-500 flex items-center gap-1">
-                <CheckCircle className="w-3 h-3" /> Ready for Phase 2
+                <CheckCircle className="w-3 h-3" /> Deterministic Execution
               </span>
             </div>
           </div>

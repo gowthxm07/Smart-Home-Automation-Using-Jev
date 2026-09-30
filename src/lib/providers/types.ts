@@ -2,7 +2,9 @@ import { DecisionEngine } from "@/types/engine";
 import { EvaluationScenario } from "@/lib/evaluation/types";
 import { ProviderAvailabilityInfo, ProviderAvailabilityStatus } from "@/lib/evaluation/comparison/types";
 
-export type ProviderId = "JEV" | "LAYA" | "LLM" | string;
+export type ProviderId = "LAYA" | "LLM";
+
+export type AnyProviderId = ProviderId | string;
 
 export type ProviderEnablementMap = Record<string, boolean>;
 
@@ -20,7 +22,7 @@ export interface ProviderModelMetadata {
  * Decoupled from hardcoded switch/if statements.
  */
 export interface ProviderRegistration {
-  providerId: ProviderId;
+  providerId: AnyProviderId;
   engineId: string;
   displayName: string;
   engine: DecisionEngine;
@@ -34,7 +36,7 @@ export interface ProviderRegistration {
  * Detailed runtime state of a provider combining user enablement and verified availability.
  */
 export interface ProviderRuntimeStatus {
-  providerId: ProviderId;
+  providerId: AnyProviderId;
   engineId: string;
   displayName: string;
   enabled: boolean;

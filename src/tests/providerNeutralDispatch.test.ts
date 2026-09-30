@@ -45,32 +45,11 @@ describe("Milestone 3.13C — Virtual Home Provider-Neutral Intent Dispatch", ()
   // =========================================================================
   it("Case A: should maintain unified provider state with enablement map and live runtime status", () => {
     const enablement: Record<string, boolean> = {
-      JEV: true,
       LAYA: true,
       LLM: true,
     };
 
     const mockStatuses: ProviderRuntimeStatus[] = [
-      {
-        providerId: "JEV",
-        engineId: "jev-engine",
-        displayName: "TypeSafe Jev",
-        enabled: enablement.JEV,
-        canExecute: false,
-        statusExplanation: "TypeSafe API key is not configured.",
-        availability: {
-          providerId: "JEV",
-          engineId: "jev-engine",
-          status: "UNAVAILABLE_CONFIGURATION",
-          detail: "API key missing",
-        },
-        metadata: {
-          model: "jev-latest",
-          runtime: "TypeSafe Cloud API",
-          isLocal: false,
-          description: "Jev engine",
-        },
-      },
       {
         providerId: "LAYA",
         engineId: "laya-engine",
@@ -91,14 +70,33 @@ describe("Milestone 3.13C — Virtual Home Provider-Neutral Intent Dispatch", ()
           description: "Laya decision model",
         },
       },
+      {
+        providerId: "LLM",
+        engineId: "llm-engine",
+        displayName: "Conventional LLM",
+        enabled: enablement.LLM,
+        canExecute: false,
+        statusExplanation: "Local Ollama daemon unreachable.",
+        availability: {
+          providerId: "LLM",
+          engineId: "llm-engine",
+          status: "UNAVAILABLE_SERVICE",
+          detail: "Connection refused",
+        },
+        metadata: {
+          model: "llama3.2:latest",
+          runtime: "Ollama",
+          isLocal: true,
+          description: "Local Ollama baseline",
+        },
+      },
     ];
 
-    expect(enablement.JEV).toBe(true);
     expect(enablement.LAYA).toBe(true);
     expect(enablement.LLM).toBe(true);
     expect(mockStatuses).toHaveLength(2);
-    expect(mockStatuses[0].providerId).toBe("JEV");
-    expect(mockStatuses[1].providerId).toBe("LAYA");
+    expect(mockStatuses[0].providerId).toBe("LAYA");
+    expect(mockStatuses[1].providerId).toBe("LLM");
   });
 
   // =========================================================================
@@ -136,7 +134,6 @@ describe("Milestone 3.13C — Virtual Home Provider-Neutral Intent Dispatch", ()
   // =========================================================================
   it("Case C: should toggle individual engine enablement without mutating other engines", () => {
     let enablement: Record<string, boolean> = {
-      JEV: true,
       LAYA: true,
       LLM: true,
     };
@@ -148,21 +145,19 @@ describe("Milestone 3.13C — Virtual Home Provider-Neutral Intent Dispatch", ()
       };
     };
 
-    // Toggle JEV off
-    toggleProvider("JEV");
-    expect(enablement.JEV).toBe(false);
-    expect(enablement.LAYA).toBe(true);
-    expect(enablement.LLM).toBe(true);
-
-    // Toggle JEV back on
-    toggleProvider("JEV");
-    expect(enablement.JEV).toBe(true);
-
     // Toggle LAYA off
     toggleProvider("LAYA");
     expect(enablement.LAYA).toBe(false);
-    expect(enablement.JEV).toBe(true);
     expect(enablement.LLM).toBe(true);
+
+    // Toggle LAYA back on
+    toggleProvider("LAYA");
+    expect(enablement.LAYA).toBe(true);
+
+    // Toggle LLM off
+    toggleProvider("LLM");
+    expect(enablement.LLM).toBe(false);
+    expect(enablement.LAYA).toBe(true);
   });
 
   // =========================================================================
@@ -170,13 +165,11 @@ describe("Milestone 3.13C — Virtual Home Provider-Neutral Intent Dispatch", ()
   // =========================================================================
   it("Case D: should strictly require both enabled === true AND availability === 'AVAILABLE' to be executable", () => {
     const rawProviders = [
-      { providerId: "JEV", availability: { status: "AVAILABLE" } },
       { providerId: "LAYA", availability: { status: "AVAILABLE" } },
       { providerId: "LLM", availability: { status: "UNAVAILABLE_SERVICE" } },
     ];
 
     const enablement: Record<string, boolean> = {
-      JEV: false, // Disabled by user
       LAYA: true, // Enabled and available
       LLM: true,  // Enabled but unavailable service
     };
@@ -191,13 +184,13 @@ describe("Milestone 3.13C — Virtual Home Provider-Neutral Intent Dispatch", ()
   });
 
   // =========================================================================
-  // Case E: Jev unconfigured and Laya available -> Laya is executable
+  // Case E: LLM unavailable and Laya available -> Laya is executable
   // =========================================================================
-  it("Case E: should mark Laya as executable when Jev is unconfigured (UNAVAILABLE_CONFIGURATION)", () => {
+  it("Case E: should mark Laya as executable when LLM is unavailable (UNAVAILABLE_SERVICE)", () => {
     const providers = [
       {
-        providerId: "JEV",
-        availability: { status: "UNAVAILABLE_CONFIGURATION", detail: "API key missing" },
+        providerId: "LLM",
+        availability: { status: "UNAVAILABLE_SERVICE", detail: "Ollama offline" },
       },
       {
         providerId: "LAYA",
@@ -205,7 +198,7 @@ describe("Milestone 3.13C — Virtual Home Provider-Neutral Intent Dispatch", ()
       },
     ];
 
-    const enablement = { JEV: true, LAYA: true, LLM: true };
+    const enablement = { LAYA: true, LLM: true };
 
     const executable = providers.filter(
       (p) => enablement[p.providerId as keyof typeof enablement] && p.availability.status === "AVAILABLE"
@@ -220,12 +213,11 @@ describe("Milestone 3.13C — Virtual Home Provider-Neutral Intent Dispatch", ()
   // =========================================================================
   it("Case F: should mark both Laya and LLM as executable when both are available", () => {
     const providers = [
-      { providerId: "JEV", availability: { status: "UNAVAILABLE_CONFIGURATION" } },
       { providerId: "LAYA", availability: { status: "AVAILABLE" } },
       { providerId: "LLM", availability: { status: "AVAILABLE" } },
     ];
 
-    const enablement = { JEV: true, LAYA: true, LLM: true };
+    const enablement = { LAYA: true, LLM: true };
 
     const executable = providers.filter(
       (p) => enablement[p.providerId as keyof typeof enablement] && p.availability.status === "AVAILABLE"
@@ -298,7 +290,7 @@ describe("Milestone 3.13C — Virtual Home Provider-Neutral Intent Dispatch", ()
       body: JSON.stringify({
         intent: testState.currentIntentText,
         homeState: testState,
-        enabledProviders: { JEV: false, LAYA: true, LLM: false },
+        enabledProviders: { LAYA: true, LLM: false },
       }),
     });
 

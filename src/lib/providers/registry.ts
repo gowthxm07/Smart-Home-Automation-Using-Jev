@@ -1,7 +1,5 @@
-import { JevDecisionEngine } from "@/lib/jev/JevDecisionEngine";
 import { LayaDecisionEngine } from "@/lib/laya/LayaDecisionEngine";
 import { LLMDecisionEngine } from "@/lib/llm/LLMDecisionEngine";
-import { getEffectiveTypeSafeApiKey } from "@/lib/typesafe/credentials";
 import { ProviderAvailabilityInfo } from "@/lib/evaluation/comparison/types";
 import {
   ProviderEnablementMap,
@@ -14,10 +12,10 @@ import {
  * Universal Provider Registry & Orchestrator.
  *
  * Implements provider-neutral management:
- * - Dynamic registration of DecisionEngine providers (Jev, Laya, LLM, etc.)
+ * - Dynamic registration of DecisionEngine providers (Laya, LLM, etc.)
  * - Strict separation of user enablement (UI configuration) vs verified backend availability
  * - Safe execution filtering: only providers that are BOTH enabled AND available can execute
- * - Provider-independent Strategy Pattern: ZERO hardcoded "if provider === 'jev'" branches
+ * - Provider-independent Strategy Pattern: ZERO hardcoded provider branches
  */
 export class ProviderRegistry {
   private readonly providers = new Map<string, ProviderRegistration>();
@@ -128,74 +126,18 @@ export class ProviderRegistry {
 }
 
 /**
- * Creates and initializes the default HomeMind ProviderRegistry with JEV, LAYA, and LLM engines.
+ * Creates and initializes the default HomeMind ProviderRegistry with LAYA and LLM engines.
  */
 export function createDefaultProviderRegistry(params?: {
-  jevEngine?: JevDecisionEngine;
   layaEngine?: LayaDecisionEngine;
   llmEngine?: LLMDecisionEngine;
 }): ProviderRegistry {
   const registry = new ProviderRegistry();
 
-  const jevEngine = params?.jevEngine || new JevDecisionEngine();
   const layaEngine = params?.layaEngine || new LayaDecisionEngine();
   const llmEngine = params?.llmEngine || new LLMDecisionEngine();
 
-  // 1. Register TypeSafe Jev
-  registry.register({
-    providerId: "JEV",
-    engineId: jevEngine.id,
-    displayName: "TypeSafe Jev (Decision-Oriented AI)",
-    engine: jevEngine,
-    modelMetadata: {
-      model: "jev-latest",
-      runtime: "TypeSafe Cloud API (System-1 Decision Engine)",
-      architecture: "Decision-Oriented Non-Autoregressive AI",
-      endpoint: process.env.TYPESAFE_BASE_URL || "https://api.typesafe.ai",
-      isLocal: false,
-      description: "Proprietary System-1 decision API by TypeSafe AI with calibrated confidence.",
-    },
-    isScenarioSupported: (s) => jevEngine.supportsScenario(s),
-    getUnsupportedReason: (s) =>
-      `Scenario category "${s.metadata?.category || "UNKNOWN"}" is outside Jev's active intent workflow families.`,
-    checkAvailability: async () => {
-      const activeKey = getEffectiveTypeSafeApiKey();
-      if (!activeKey) {
-        return {
-          providerId: "JEV",
-          engineId: jevEngine.id,
-          status: "UNAVAILABLE_CONFIGURATION",
-          detail: "TypeSafe API key is not configured (portal registration is at capacity).",
-        };
-      }
-      try {
-        const health = await jevEngine.checkHealth();
-        if (health.healthy) {
-          return {
-            providerId: "JEV",
-            engineId: jevEngine.id,
-            status: "AVAILABLE",
-            detail: "TypeSafe Jev API credentials configured and endpoint reachable.",
-          };
-        }
-        return {
-          providerId: "JEV",
-          engineId: jevEngine.id,
-          status: "UNAVAILABLE_SERVICE",
-          detail: `TypeSafe Jev API unreachable: ${health.error || "service unavailable"}`,
-        };
-      } catch (err: unknown) {
-        return {
-          providerId: "JEV",
-          engineId: jevEngine.id,
-          status: "UNAVAILABLE_SERVICE",
-          detail: `TypeSafe Jev API error: ${(err as Error)?.message || "connection error"}`,
-        };
-      }
-    },
-  });
-
-  // 2. Register Laya
+  // 1. Register Laya
   registry.register({
     providerId: "LAYA",
     engineId: layaEngine.id,

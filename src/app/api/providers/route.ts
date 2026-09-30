@@ -12,7 +12,6 @@ const registry = createDefaultProviderRegistry();
 export async function GET() {
   try {
     const statuses = await registry.getStatuses({
-      JEV: true,
       LAYA: true,
       LLM: true,
     });
@@ -60,7 +59,6 @@ export async function POST(req: NextRequest) {
     }
 
     const enablement = enabledProviders || {
-      JEV: true,
       LAYA: true,
       LLM: true,
     };

@@ -34,7 +34,7 @@ export const Header: React.FC = () => {
                 HomeMind
               </h1>
               <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/30 font-semibold">
-                PHASE 1 FOUNDATION
+                MULTI-ENGINE PLATFORM
               </span>
             </div>
             <p className="text-xs text-slate-400 font-normal">

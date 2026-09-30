@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useHome } from "@/context/HomeContext";
-import { History, Trash2, Filter, User, Cpu, Sparkles, Terminal } from "lucide-react";
+import { History, Trash2, Filter, User, Cpu, Terminal } from "lucide-react";
 import { ActionSource } from "@/types/action";
 
 export const ActionHistoryPanel: React.FC = () => {
@@ -23,11 +23,11 @@ export const ActionHistoryPanel: React.FC = () => {
             MANUAL
           </span>
         );
-      case "JEV":
+      case "LAYA":
         return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-medium bg-purple-500/10 text-purple-400 border border-purple-500/25">
-            <Sparkles className="w-3 h-3" />
-            JEV
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-medium bg-teal-500/10 text-teal-400 border border-teal-500/25">
+            <Cpu className="w-3 h-3" />
+            LAYA
           </span>
         );
       case "LLM":
@@ -78,7 +78,7 @@ export const ActionHistoryPanel: React.FC = () => {
               </span>
             </h2>
             <p className="text-xs text-slate-400">
-              Audit log of state transitions (supports MANUAL now, JEV & LLM in later phases)
+              Audit log of state transitions across manual overrides, Laya, and Conventional LLM
             </p>
           </div>
         </div>
@@ -87,7 +87,7 @@ export const ActionHistoryPanel: React.FC = () => {
           {/* Filter */}
           <div className="flex items-center gap-1 bg-slate-900/80 p-1 rounded-lg border border-slate-800 text-xs">
             <Filter className="w-3.5 h-3.5 text-slate-400 ml-1" />
-            {(["ALL", "MANUAL", "JEV", "LLM"] as const).map((s) => (
+            {(["ALL", "MANUAL", "LAYA", "LLM", "SYSTEM"] as const).map((s) => (
               <button
                 key={s}
                 onClick={() => setSourceFilter(s)}

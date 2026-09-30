@@ -6,16 +6,6 @@ import {
   ProviderRuntimeStatus,
   ProviderEnablementMap,
 } from "@/lib/providers";
-import {
-  setRuntimeTypeSafeApiKey,
-  getRuntimeTypeSafeApiKey,
-  clearRuntimeTypeSafeApiKey,
-  hasRuntimeTypeSafeApiKey,
-  getEffectiveTypeSafeApiKey,
-  getTypeSafeApiKeySource,
-  InvalidCredentialError,
-} from "@/lib/typesafe/credentials";
-import { GET as getCredentials, POST as postCredentials, DELETE as deleteCredentials } from "@/app/api/credentials/typesafe/route";
 import { GET as getProviders, POST as postEvaluateProviders } from "@/app/api/providers/route";
 import { LayaDecisionEngine } from "@/lib/laya/LayaDecisionEngine";
 import { LayaClient } from "@/lib/laya/client";
@@ -62,20 +52,7 @@ function createTestHomeState(): HomeState {
 }
 
 describe("Milestone 3.8 — Multi-Provider Decision Platform & Strategy Orchestrator", () => {
-  const originalEnvKey = process.env.TYPESAFE_API_KEY;
-
-  beforeEach(() => {
-    clearRuntimeTypeSafeApiKey();
-    delete process.env.TYPESAFE_API_KEY;
-  });
-
   afterEach(() => {
-    clearRuntimeTypeSafeApiKey();
-    if (originalEnvKey !== undefined) {
-      process.env.TYPESAFE_API_KEY = originalEnvKey;
-    } else {
-      delete process.env.TYPESAFE_API_KEY;
-    }
     vi.restoreAllMocks();
   });
 
@@ -83,15 +60,13 @@ describe("Milestone 3.8 — Multi-Provider Decision Platform & Strategy Orchestr
   // SUITE 1: Provider Registry Core & Strategy Pattern (Points 1, 2, 8, 24)
   // =========================================================================
   describe("Suite 1: Provider Registry Core & Strategy Pattern", () => {
-    it("Point 1: default registry registers all three AI engines: JEV, LAYA, and LLM", () => {
+    it("Point 1: default registry registers exactly two AI engines: LAYA and LLM", () => {
       const registry = createDefaultProviderRegistry();
       const all = registry.getAll();
       const ids = all.map((p) => p.providerId);
 
-      expect(all.length).toBe(3);
-      expect(ids).toContain("JEV");
-      expect(ids).toContain("LAYA");
-      expect(ids).toContain("LLM");
+      expect(all.length).toBe(2);
+      expect(ids).toEqual(["LAYA", "LLM"]);
     });
 
     it("Point 2: each registered provider supplies complete metadata (model, runtime, architecture, endpoint, isLocal, description)", () => {
@@ -171,7 +146,6 @@ describe("Milestone 3.8 — Multi-Provider Decision Platform & Strategy Orchestr
     it("Point 3: getEnabled filters providers based on user enablement map", () => {
       const registry = createDefaultProviderRegistry();
       const enablement: ProviderEnablementMap = {
-        JEV: true,
         LAYA: false,
         LLM: true,
       };
@@ -179,8 +153,7 @@ describe("Milestone 3.8 — Multi-Provider Decision Platform & Strategy Orchestr
       const enabled = registry.getEnabled(enablement);
       const enabledIds = enabled.map((p) => p.providerId);
 
-      expect(enabledIds).toContain("JEV");
-      expect(enabledIds).toContain("LLM");
+      expect(enabledIds).toEqual(["LLM"]);
       expect(enabledIds).not.toContain("LAYA");
     });
 
@@ -263,15 +236,6 @@ describe("Milestone 3.8 — Multi-Provider Decision Platform & Strategy Orchestr
       expect(executable[0].providerId).toBe("PROV_A");
     });
 
-    it("Point 5: missing Jev API key returns UNAVAILABLE_CONFIGURATION status", async () => {
-      const registry = createDefaultProviderRegistry();
-      const jev = registry.get("JEV");
-      expect(jev).toBeDefined();
-
-      const availability = await jev!.checkAvailability();
-      expect(availability.status).toBe("UNAVAILABLE_CONFIGURATION");
-      expect(availability.detail).toContain("TypeSafe API key is not configured");
-    });
 
     it("Point 6: unreachable Laya daemon returns UNAVAILABLE_SERVICE status", async () => {
       const registry = createDefaultProviderRegistry();
@@ -346,91 +310,6 @@ describe("Milestone 3.8 — Multi-Provider Decision Platform & Strategy Orchestr
     });
   });
 
-  // =========================================================================
-  // SUITE 3: Server-Side In-Memory TypeSafe Jev Runtime Credential Store (Points 14, 15)
-  // =========================================================================
-  describe("Suite 3: Server-Side In-Memory TypeSafe Jev Runtime Credential Store", () => {
-    it("Point 14: manages in-memory runtime credentials with validation, precedence, and masking", () => {
-      expect(hasRuntimeTypeSafeApiKey()).toBe(false);
-      expect(getRuntimeTypeSafeApiKey()).toBeNull();
-      expect(getTypeSafeApiKeySource()).toBe("NONE");
-
-      // Validation errors
-      expect(() => setRuntimeTypeSafeApiKey("")).toThrow(InvalidCredentialError);
-      expect(() => setRuntimeTypeSafeApiKey("short")).toThrow(InvalidCredentialError);
-      expect(() => setRuntimeTypeSafeApiKey("has\ninvalid\nchars12345")).toThrow(InvalidCredentialError);
-
-      // Successful in-memory set
-      setRuntimeTypeSafeApiKey("ts_valid_runtime_key_987654321");
-      expect(hasRuntimeTypeSafeApiKey()).toBe(true);
-      expect(getRuntimeTypeSafeApiKey()).toBe("ts_valid_runtime_key_987654321");
-      expect(getTypeSafeApiKeySource()).toBe("RUNTIME");
-      expect(getEffectiveTypeSafeApiKey()).toBe("ts_valid_runtime_key_987654321");
-
-      // Precedence: Runtime overrides ENV
-      process.env.TYPESAFE_API_KEY = "ts_env_key_00000000";
-      expect(getEffectiveTypeSafeApiKey()).toBe("ts_valid_runtime_key_987654321");
-      expect(getTypeSafeApiKeySource()).toBe("RUNTIME");
-
-      // Clear runtime key falls back to ENV
-      clearRuntimeTypeSafeApiKey();
-      expect(hasRuntimeTypeSafeApiKey()).toBe(false);
-      expect(getEffectiveTypeSafeApiKey()).toBe("ts_env_key_00000000");
-      expect(getTypeSafeApiKeySource()).toBe("ENV");
-
-      // Clear ENV
-      delete process.env.TYPESAFE_API_KEY;
-      expect(getEffectiveTypeSafeApiKey()).toBeNull();
-      expect(getTypeSafeApiKeySource()).toBe("NONE");
-    });
-
-    it("Point 15: /api/credentials/typesafe routes securely handle GET, POST, DELETE without leaking key strings", async () => {
-      // 1. Initial GET
-      const getRes1 = await getCredentials();
-      expect(getRes1.status).toBe(200);
-      const data1 = await getRes1.json();
-      expect(data1.configured).toBe(false);
-      expect(data1.source).toBe("NONE");
-      expect(JSON.stringify(data1)).not.toContain("ts_");
-
-      // 2. POST invalid key
-      const badReq = new NextRequest("http://localhost:3000/api/credentials/typesafe", {
-        method: "POST",
-        body: JSON.stringify({ apiKey: "bad" }),
-      });
-      const badRes = await postCredentials(badReq);
-      expect(badRes.status).toBe(400);
-
-      // 3. POST valid key
-      const validReq = new NextRequest("http://localhost:3000/api/credentials/typesafe", {
-        method: "POST",
-        body: JSON.stringify({ apiKey: "ts_live_key_for_testing_12345" }),
-      });
-      const postRes = await postCredentials(validReq);
-      expect(postRes.status).toBe(200);
-      const postData = await postRes.json();
-      expect(postData.success).toBe(true);
-      expect(postData.configured).toBe(true);
-      expect(postData.source).toBe("RUNTIME");
-      // CRITICAL: Raw key is NEVER present in the serialized JSON response
-      expect(JSON.stringify(postData)).not.toContain("ts_live_key_for_testing_12345");
-
-      // 4. GET now shows configured
-      const getRes2 = await getCredentials();
-      const data2 = await getRes2.json();
-      expect(data2.configured).toBe(true);
-      expect(data2.source).toBe("RUNTIME");
-      expect(JSON.stringify(data2)).not.toContain("ts_live_key_for_testing_12345");
-
-      // 5. DELETE clears key
-      const delRes = await deleteCredentials();
-      expect(delRes.status).toBe(200);
-      const delData = await delRes.json();
-      expect(delData.success).toBe(true);
-      expect(delData.configured).toBe(false);
-      expect(hasRuntimeTypeSafeApiKey()).toBe(false);
-    });
-  });
 
   // =========================================================================
   // SUITE 4: Laya Decision Engine Integration & Policy (Points 16, 17)
@@ -771,18 +650,17 @@ describe("Milestone 3.8 — Multi-Provider Decision Platform & Strategy Orchestr
       });
 
       const registry = new ProviderRegistry();
-      registry.register(makeEngine("JEV", "Jev"));
       registry.register(makeEngine("LAYA", "Laya"));
       registry.register(makeEngine("LLM", "LLM"));
 
-      const executable = await registry.getExecutable({ JEV: true, LAYA: true, LLM: true });
+      const executable = await registry.getExecutable({ LAYA: true, LLM: true });
       const testIntent = "I am heading to sleep. Goodnight!";
 
       for (const p of executable) {
         await p.engine.evaluate(testIntent, createTestHomeState());
       }
 
-      expect(intentsReceived).toHaveLength(3);
+      expect(intentsReceived).toHaveLength(2);
       expect(intentsReceived.every((i) => i === testIntent)).toBe(true);
     });
 
@@ -809,7 +687,7 @@ describe("Milestone 3.8 — Multi-Provider Decision Platform & Strategy Orchestr
         body: JSON.stringify({
           intent: "Turn off living room light",
           homeState: createTestHomeState(),
-          enabledProviders: { JEV: false, LAYA: false, LLM: false }, // all disabled
+          enabledProviders: { LAYA: false, LLM: false }, // all disabled
         }),
       });
       const res3 = await postEvaluateProviders(req3);
