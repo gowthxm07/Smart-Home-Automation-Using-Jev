@@ -395,8 +395,16 @@ export async function runPreFlightValidation(params: {
   outputDir?: string;
   gitCommitHash?: string;
   mode?: ExperimentMode;
+  activeProviderIds?: string[];
 }): Promise<PreFlightValidationResult> {
   const mode: ExperimentMode = params.mode || "FULL_COMPARISON";
+  const activeProviderIds =
+    params.activeProviderIds ||
+    (mode === "LLM_ONLY_READINESS"
+      ? ["LLM"]
+      : mode === "LAYA_ONLY_READINESS"
+      ? ["LAYA"]
+      : ["JEV", "LAYA", "LLM"]);
   const checks: PreFlightCheckItem[] = [];
   const repetitions = params.repetitions ?? 5;
   const targetDir = params.outputDir || path.resolve(process.cwd(), "artifacts/benchmarks");
@@ -467,21 +475,34 @@ export async function runPreFlightValidation(params: {
   });
 
   // 5. Decision engines available
-  const jevEngine = params.jevEngine || new JevDecisionEngine();
+  const jevEngine = activeProviderIds.includes("JEV")
+    ? params.jevEngine || new JevDecisionEngine()
+    : params.jevEngine;
   const layaEngine = params.layaEngine || new LayaDecisionEngine();
   const llmEngine = params.llmEngine || new LLMDecisionEngine();
-  const enginesAvailable = Boolean(jevEngine && layaEngine && llmEngine && jevEngine.id && layaEngine.id && llmEngine.id);
+  const enginesAvailable = activeProviderIds.includes("JEV")
+    ? Boolean(jevEngine && layaEngine && llmEngine && jevEngine.id && layaEngine.id && llmEngine.id)
+    : Boolean(layaEngine && llmEngine && layaEngine.id && llmEngine.id);
   checks.push({
     id: 5,
     name: "Decision Engines Available",
     passed: enginesAvailable,
     detail: enginesAvailable
-      ? `Jev (${jevEngine.id}), Laya (${layaEngine.id}), and LLM (${llmEngine.id}) instantiated.`
-      : "One or more decision engines are unavailable.",
+      ? activeProviderIds.includes("JEV")
+        ? `Jev (${jevEngine?.id}), Laya (${layaEngine.id}), and LLM (${llmEngine.id}) instantiated.`
+        : `Laya (${layaEngine.id}) and LLM (${llmEngine.id}) instantiated for active comparison.`
+      : "One or more required decision engines are unavailable.",
   });
 
   // Evaluate concrete provider availability statuses
-  const jevAvail = await checkProviderAvailability("JEV", jevEngine);
+  const jevAvail = activeProviderIds.includes("JEV") && jevEngine
+    ? await checkProviderAvailability("JEV", jevEngine)
+    : {
+        providerId: "JEV",
+        engineId: "jev-system-one",
+        status: "UNSUPPORTED" as const,
+        detail: "Jev is retired from live runtime; active comparative providers are LAYA and LLM.",
+      };
   const layaAvail = await checkProviderAvailability("LAYA", layaEngine);
   const llmAvail = await checkProviderAvailability("LLM", llmEngine);
   const providerAvailability: Record<string, ProviderAvailabilityInfo> = {
@@ -497,6 +518,13 @@ export async function runPreFlightValidation(params: {
       name: "TypeSafe API Configuration (Jev)",
       passed: true,
       detail: `[N/A — ${mode}] Jev is not evaluated in ${mode} mode. (Jev status: ${jevAvail.status})`,
+    });
+  } else if (!activeProviderIds.includes("JEV")) {
+    checks.push({
+      id: 6,
+      name: "TypeSafe API Configuration (Jev)",
+      passed: true,
+      detail: `[N/A — Active providers: ${activeProviderIds.join(", ")}] Jev is not evaluated in active comparative study. (Jev status: ${jevAvail.status})`,
     });
   } else {
     checks.push({
@@ -542,15 +570,17 @@ export async function runPreFlightValidation(params: {
   });
 
   // 10. Timeout configuration is present
-  const timeoutsValid =
-    (jevEngine.getClient() as any).timeoutMs > 0 &&
-    llmEngine.getClient().getTimeoutMs() > 0;
+  const timeoutsValid = activeProviderIds.includes("JEV") && jevEngine
+    ? (jevEngine.getClient() as any).timeoutMs > 0 && llmEngine.getClient().getTimeoutMs() > 0
+    : layaEngine.getClient().getTimeoutMs() > 0 && llmEngine.getClient().getTimeoutMs() > 0;
   checks.push({
     id: 10,
     name: "Timeout Configuration Present",
     passed: timeoutsValid,
     detail: timeoutsValid
-      ? `Jev timeout: ${(jevEngine.getClient() as any).timeoutMs}ms, LLM timeout: ${llmEngine.getClient().getTimeoutMs()}ms.`
+      ? activeProviderIds.includes("JEV") && jevEngine
+        ? `Jev timeout: ${(jevEngine.getClient() as any).timeoutMs}ms, LLM timeout: ${llmEngine.getClient().getTimeoutMs()}ms.`
+        : `Laya timeout: ${layaEngine.getClient().getTimeoutMs()}ms, LLM timeout: ${llmEngine.getClient().getTimeoutMs()}ms.`
       : "Invalid or missing timeout configurations.",
   });
 
@@ -860,10 +890,16 @@ export async function runControlledExperiment(
         ? 180000
         : 30000;
 
+    const resolvedLayaTimeoutMs =
+      typeof (layaProvider?.engine as any)?.getClient === "function" &&
+      typeof (layaProvider!.engine as any).getClient()?.getTimeoutMs === "function"
+        ? (layaProvider!.engine as any).getClient().getTimeoutMs()
+        : 60000;
+
     const maxActiveProviderTimeout = Math.max(
       ...activeProviders.map((p) => {
         if (p.providerId === "LLM") return resolvedLlmTimeoutMs;
-        if (p.providerId === "LAYA") return 15000;
+        if (p.providerId === "LAYA") return resolvedLayaTimeoutMs;
         if (p.providerId === "JEV") return 15000;
         return 15000;
       })
@@ -900,7 +936,7 @@ export async function runControlledExperiment(
               typeof (layaProvider.engine as any)?.getClient === "function"
                 ? (layaProvider.engine as any).getClient().getBaseUrl()
                 : "http://127.0.0.1:8081",
-            timeoutMs: 15000,
+            timeoutMs: resolvedLayaTimeoutMs,
           }
         : undefined,
       llmConfiguration: llmProvider
@@ -922,7 +958,7 @@ export async function runControlledExperiment(
         : undefined,
       timeoutConfiguration: {
         jevTimeoutMs: 15000,
-        layaTimeoutMs: 15000,
+        layaTimeoutMs: resolvedLayaTimeoutMs,
         llmTimeoutMs: resolvedLlmTimeoutMs,
         perScenarioTimeoutMs: resolvedPerScenarioTimeoutMs,
       },

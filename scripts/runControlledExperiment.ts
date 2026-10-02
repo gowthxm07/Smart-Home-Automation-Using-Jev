@@ -2,7 +2,6 @@ import path from "path";
 import fs from "fs";
 import { execSync } from "child_process";
 import { getAllEvaluationScenarios } from "../src/lib/evaluation/dataset";
-import { JevDecisionEngine } from "../src/lib/jev/JevDecisionEngine";
 import { LayaDecisionEngine } from "../src/lib/laya/LayaDecisionEngine";
 import { LLMDecisionEngine } from "../src/lib/llm/LLMDecisionEngine";
 import {
@@ -86,7 +85,6 @@ async function main() {
   }
 
   const scenarios = getAllEvaluationScenarios();
-  const jevEngine = new JevDecisionEngine();
   const layaEngine = new LayaDecisionEngine();
 
   const llmTimeoutMs =
@@ -103,12 +101,12 @@ async function main() {
   // Pre-Flight Validation
   console.log("--- PART 21: PRE-FLIGHT VALIDATION ---");
   const preflight = await runPreFlightValidation({
-    jevEngine,
     layaEngine,
     llmEngine,
     scenarios,
     repetitions: 5,
     mode,
+    activeProviderIds: ["LAYA", "LLM"],
   });
 
   for (const check of preflight.checks) {
@@ -319,19 +317,12 @@ async function main() {
   // Handler: FULL_COMPARISON
   if (!preflight.allPassed) {
     const failedChecks = preflight.checks.filter((c) => !c.passed);
-    const jevStatus = preflight.providerAvailability["JEV"]?.status;
     const layaStatus = preflight.providerAvailability["LAYA"]?.status;
+    const llmStatus = preflight.providerAvailability["LLM"]?.status;
 
     console.error("================================================================================");
     console.error("[PRE-FLIGHT VALIDATION FAILED] Cannot proceed to live comparative experiment.");
     console.error(`Failed checks: ${failedChecks.map((c) => `#${c.id} (${c.name})`).join(", ")}`);
-
-    if (jevStatus === "UNAVAILABLE_CONFIGURATION" || jevStatus === "UNAVAILABLE_SERVICE") {
-      console.error("\n[DIAGNOSTIC — JEV PROVIDER UNAVAILABLE]");
-      console.error(`Status: ${jevStatus}`);
-      console.error(`Detail: ${preflight.providerAvailability["JEV"]?.detail}`);
-      console.error("  Note: TypeSafe registration portal is currently at capacity.");
-    }
 
     if (layaStatus !== "AVAILABLE") {
       console.error("\n[DIAGNOSTIC — LAYA PROVIDER UNAVAILABLE]");
@@ -340,9 +331,16 @@ async function main() {
       console.error("  Note: Start local Laya daemon via 'laya-serve' on port 8081.");
     }
 
+    if (llmStatus !== "AVAILABLE") {
+      console.error("\n[DIAGNOSTIC — LLM PROVIDER UNAVAILABLE]");
+      console.error(`Status: ${llmStatus}`);
+      console.error(`Detail: ${preflight.providerAvailability["LLM"]?.detail}`);
+      console.error("  Note: Ensure Ollama daemon is running at http://127.0.0.1:11434 with model 'llama3.2:3b'.");
+    }
+
     console.error("\nPer strict scientific protocol:");
     console.error("  1. Providers are never substituted with alternative models or proxies.");
-    console.error("  2. Full comparative research requires at least two fully AVAILABLE providers.");
+    console.error("  2. Full comparative research requires all active comparative providers (LAYA, LLM) to be fully AVAILABLE.");
     console.error("\nFor single-provider baseline readiness, run:");
     console.error("  npm run experiment:llm-readiness    # for Ollama LLM baseline");
     console.error("  npm run experiment:laya-readiness   # for Laya System-1 baseline");
@@ -352,17 +350,10 @@ async function main() {
     process.exit(1);
   }
 
-  console.log("--- LIVE CONTROLLED EXPERIMENT EXECUTION (FULL COMPARISON) ---");
-  console.log(`Executing 36 scenarios × configured providers × 5 repetitions...\n`);
+  console.log("--- LIVE CONTROLLED EXPERIMENT EXECUTION (FULL COMPARISON: LAYA vs LLM) ---");
+  console.log(`Executing 36 scenarios × 2 providers (LAYA, LLM) × 5 repetitions = 360 cells...\n`);
 
   const providers: ComparativeProviderEntry[] = [
-    {
-      providerId: "JEV",
-      engine: jevEngine,
-      isScenarioSupported: (s) => jevEngine.supportsScenario(s),
-      getUnsupportedReason: (s) =>
-        `Scenario category "${s.metadata?.category || "UNKNOWN"}" is outside Jev's active intent workflow families.`,
-    },
     {
       providerId: "LAYA",
       engine: layaEngine,
