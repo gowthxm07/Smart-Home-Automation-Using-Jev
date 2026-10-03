@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "HomeMind — Context-Aware Smart Home Decision Engine",
+  title: "HomeMind — Context-Aware Multi-Device Smart Home Automation",
   description:
-    "Simulated context-aware multi-device smart home automation environment across AI decision engines.",
+    "Software-simulated context-aware multi-device smart home automation and research evaluation platform across AI decision engines.",
 };
 
 export default function RootLayout({

@@ -1,10 +1,10 @@
 # HomeMind Controlled Experiment Results Summary
 
 **Executive Briefing & Viva Reference Guide**  
+**Official Repository**: `https://github.com/gowthxm07/Smart-Home-Automation-Using-Laya`<br/>
 **Experiment ID**: `exp_ctrl_1790945358821_ibkjxz`  
 **Dataset**: `HomeMind-Eval-Dataset-v1.0` (36 Frozen Controlled Scenarios)  
 **Dataset SHA-256 Invariant**: `66de3242d1ba6583dc385a2999f8f8ba556a1f52cf5862cc7f223c9cdbfc0329`  
-**Git Commit SHA**: `a996b9e6759b009fd630b9ae8ec5625d8aade12c`  
 **Methodological Policy**: Strict descriptive reporting. No winner, ranking, composite scores, or causal claims.
 
 ---

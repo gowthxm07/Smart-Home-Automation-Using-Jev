@@ -62,7 +62,8 @@ ollama serve
 
 ### Step 3: Launch HomeMind Web Application (Terminal 3)
 ```powershell
-cd "D:\Home simulator using Jev"
+# Navigate to repository directory
+cd Smart-Home-Automation-Using-Laya
 
 # Start Next.js development server
 npm run dev

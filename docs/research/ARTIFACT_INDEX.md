@@ -1,9 +1,9 @@
 # HomeMind Research Artifact Index
 
+**Official Repository**: `https://github.com/gowthxm07/Smart-Home-Automation-Using-Laya`<br/>
 **Experiment ID**: `exp_ctrl_1790945358821_ibkjxz`  
 **Dataset Version**: `HomeMind-Eval-Dataset-v1.0 (36 Controlled Scenarios)`  
 **Dataset SHA-256 Hash**: `66de3242d1ba6583dc385a2999f8f8ba556a1f52cf5862cc7f223c9cdbfc0329`  
-**Git Commit SHA**: `a996b9e6759b009fd630b9ae8ec5625d8aade12c`  
 **Execution Matrix**: 36 scenarios $\times$ 2 active providers $\times$ 5 repetitions = 360 cells  
 
 ---

@@ -1,10 +1,10 @@
 # HomeMind — Context-Aware Multi-Device Smart Home Automation
 
 **Academic Research Report & Experimental Evaluation**  
+**Official Repository**: `https://github.com/gowthxm07/Smart-Home-Automation-Using-Laya`<br/>
 **Document Version**: 1.0 (Final Research Release)  
 **Experiment Identifier**: `exp_ctrl_1790945358821_ibkjxz`  
 **Evaluation Mode**: `FULL_COMPARISON`  
-**Git Commit SHA**: `a996b9e6759b009fd630b9ae8ec5625d8aade12c`  
 **Dataset Invariant**: `HomeMind-Eval-Dataset-v1.0` (SHA-256: `66de3242d1ba6583dc385a2999f8f8ba556a1f52cf5862cc7f223c9cdbfc0329`)  
 **Evaluation Engine**: Standard Provider-Neutral Evaluator (`StandardEvaluationEngine`)  
 **Simulation Engine**: Deterministic World-Model State Transition Engine (`SimulationEngine`)  

@@ -1,8 +1,8 @@
 # HomeMind Figure & Table Reference Guide
 
+**Official Repository**: `https://github.com/gowthxm07/Smart-Home-Automation-Using-Laya`<br/>
 **Experiment ID**: `exp_ctrl_1790945358821_ibkjxz`  
 **Dataset Invariant**: `HomeMind-Eval-Dataset-v1.0` (SHA-256: `66de3242d1ba6583dc385a2999f8f8ba556a1f52cf5862cc7f223c9cdbfc0329`)  
-**Git Commit SHA**: `a996b9e6759b009fd630b9ae8ec5625d8aade12c`  
 **Location of Visualizations**: `artifacts/analysis/controlled-experiment/visualizations/`  
 
 ---

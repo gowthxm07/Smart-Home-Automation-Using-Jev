@@ -2,7 +2,11 @@
   "name": "homemind-smart-home-simulator",
   "version": "1.0.0",
   "private": true,
-  "description": "HomeMind — Context-Aware Multi-Device Smart Home Automation (Phase 1 Simulation Foundation)",
+  "description": "HomeMind — Context-Aware Multi-Device Smart Home Automation",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/gowthxm07/Smart-Home-Automation-Using-Laya.git"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",

@@ -84,9 +84,9 @@ $$\text{Matrix} = 36\text{ scenarios} \times 2\text{ providers} \times 5\text{ r
 
 1. **Clone the Repository**:
    ```bash
-   git clone <repository-url>
-   cd "Home simulator using Jev"
-   git checkout a996b9e6759b009fd630b9ae8ec5625d8aade12c
+   git clone https://github.com/gowthxm07/Smart-Home-Automation-Using-Laya.git
+   cd Smart-Home-Automation-Using-Laya
+   git checkout v1.0-final
    ```
 
 2. **Install Dependencies**:

@@ -1,11 +1,11 @@
 # HomeMind Research Documentation Package
 
 **Project**: HomeMind — Context-Aware Multi-Device Smart Home Automation  
-**Release**: Academic Research Package (Milestone 3.23)  
+**Official Repository**: `https://github.com/gowthxm07/Smart-Home-Automation-Using-Laya`<br/>
+**Release**: Academic Research Package (`v1.0-final`)<br/>
 **Experiment ID**: `exp_ctrl_1790945358821_ibkjxz`  
 **Dataset Version**: `HomeMind-Eval-Dataset-v1.0` (36 Frozen Controlled Scenarios)  
 **Dataset SHA-256 Hash**: `66de3242d1ba6583dc385a2999f8f8ba556a1f52cf5862cc7f223c9cdbfc0329`  
-**Git Commit SHA**: `a996b9e6759b009fd630b9ae8ec5625d8aade12c`  
 **Controlled Grid**: 36 scenarios $\times$ 2 active providers $\times$ 5 repetitions = **360 execution cells**  
 
 ---
@@ -30,7 +30,8 @@ docs/research/
 ├── REPRODUCIBILITY.md                  <- Step-by-step reproduction guide and audit procedures
 ├── ARTIFACT_INDEX.md                   <- Comprehensive index of all raw, summary, and visualization files
 ├── FIGURE_TABLE_REFERENCE.md           <- Scientific mapping and interpretation guide for Figures 1–12 and Tables 1–7
-└── 3.22A_FORENSIC_RECONCILIATION.md    <- Forensic audit report verifying mathematical integrity of raw data
+├── 3.22A_FORENSIC_RECONCILIATION.md    <- Forensic audit report verifying mathematical integrity of raw data
+└── 3.24_FINAL_END_TO_END_AUDIT.md      <- Final system & research audit report (20 PASS, 0 WARN, 0 BLOCK)
 ```
 
 ### Recommended Reading Paths

@@ -2,6 +2,7 @@
 
 **Academic Project Defense & Comprehensive Technical Q&A Manual**  
 **Project**: HomeMind — Context-Aware Multi-Device Smart Home Automation  
+**Official Repository**: `https://github.com/gowthxm07/Smart-Home-Automation-Using-Laya`<br/>
 **Release**: Final Frozen Release (v1.0-final)  
 **Experiment ID**: `exp_ctrl_1790945358821_ibkjxz`  
 

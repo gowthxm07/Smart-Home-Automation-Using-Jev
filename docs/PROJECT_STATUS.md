@@ -1,8 +1,10 @@
 # HomeMind Project Status
 
-**Release**: Final Frozen Release (`v1.0-final`)  
-**Status Date**: `2026-10-03`  
-**Git Commit SHA**: `a996b9e6759b009fd630b9ae8ec5625d8aade12c`  
+**Project**: HomeMind — Context-Aware Multi-Device Smart Home Automation<br/>
+**Official Repository**: `https://github.com/gowthxm07/Smart-Home-Automation-Using-Laya`<br/>
+**Application / Research Freeze Release**: `v1.0-final` (`a6a250e7e375fb1cc37a123adb9b37da350b1187`)<br/>
+**Documentation Release**: `v1.0-final-docs`<br/>
+**Status Date**: `2026-10-03`<br/>
 **Lifecycle State**: **FROZEN / SUBMISSION-READY**  
 
 ---
